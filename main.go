@@ -105,9 +105,11 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
 
 	if err == nil && pong == "PONG" {
 		if isOnlineVPN {
-			rdb.Set(IP, true, 24*7*time.Hour)
+			// forever vpn
+			rdb.Set(IP, true, 0)
 		} else {
-			rdb.Set(IP, false, 0)
+			// for one week no vpn
+			rdb.Set(IP, false, 24*7*time.Hour)
 		}
 	}
 
