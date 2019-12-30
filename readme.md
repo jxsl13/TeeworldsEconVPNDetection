@@ -1,3 +1,7 @@
+## Requirements
+ - Redis server for caching of IPs
+ - .env file in te same folder as the executable
+
 ## Example .env
 This file needs to live within the same directory as yout executable.
 ```
@@ -37,4 +41,4 @@ go build .
 
 ##### EOF error
 The Teeworlds server banned you for attempting to login too any times or for connecting too often.
-Possible solution is to restart the game server.
+Possible solution is to restart the game server. Should not be an issue, as the detector attempts to reconnect to the server.
