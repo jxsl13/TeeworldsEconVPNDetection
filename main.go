@@ -62,6 +62,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 		isVPNTmp, err := api.IsVpn(sIP)
 
 		if err != nil {
+			log.Println("[ERROR]:", err.Error())
 			results[idx] = Valid{false, false}
 			continue
 		}
@@ -80,9 +81,14 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 		}
 	}
 
+	if total == 0.0 {
+		log.Println("[ERROR]: All APIs seem to have exceeded their rate limitations.")
+		IsVPN = false
+		return
+	}
 	percentage := trueValue / total
 
-	IsVPN = percentage >= 0.5
+	IsVPN = percentage >= 0.6
 	return
 }
 
@@ -162,17 +168,28 @@ func main() {
 	// share client with all apis
 	httpClient := &http.Client{}
 
+	dailyRequestLimits := []int{
+		500,  // 500 api calls per day - GetIPIntel
+		1000, // 1000 api calls per day - IPHub
+		1000, // 1000 api calls per day - ip.teoh.io
+	}
+
+	var dailytLimits []*RateLimiter
+	for _, dailyRequestLimit := range dailyRequestLimits {
+		dailytLimits = append(dailytLimits, NewRateLimiter(24*time.Hour, dailyRequestLimit))
+	}
+
 	// list of posisble apis to use
 	apis := []VpnAPI{
-		GetIPIntelNet{httpClient, CooldownHandler{}, Email, 0.9},
-		IPHub{httpClient, CooldownHandler{}, IPHubToken},
-		IPTeohIO{httpClient, CooldownHandler{}},
+		&GetIPIntelNet{httpClient, dailytLimits[0], Email, 0.9}, // 500 api calls per day
+		&IPHub{httpClient, dailytLimits[1], IPHubToken},         // 1000 api calls per day
+		&IPTeohIO{httpClient, dailytLimits[2]},                  // 1000  api calls per day
 	}
 
 	rdb := VPNChecker{redis.NewClient(&redis.Options{
 		Addr:     RedisAddress,
-		Password: RedisPassword, // no password set
-		DB:       0,             // use default DB
+		Password: RedisPassword,
+		DB:       0, // use default DB
 	}),
 		apis}
 	defer rdb.Close() // close before return
@@ -186,8 +203,14 @@ func main() {
 		defer wg.Done()
 
 		reconnectTimer := time.Second
+		retries := 0
 		for {
-			log.Println("Starting routine for server: ", CurrentServer)
+			if retries == 0 {
+				log.Println("Connecting to server:", CurrentServer)
+			} else {
+				log.Println("Retrying to connect to server:", CurrentServer)
+			}
+
 			err := telnet.DialToAndCall(CurrentServer, internalStandardCaller{CurrentServer, CurrentPassword, rdb, env, &wg})
 			if err != nil {
 				log.Println("Could not connect to server:", CurrentServer)
@@ -204,12 +227,13 @@ func main() {
 					break
 				}
 			}
+			retries++
 		}
 	}
 
+	wg.Add(len(GameServerAddresses))
+	// start goroutines
 	for idx, CurrentServer := range GameServerAddresses {
-
-		wg.Add(1)
 		go Run(CurrentServer, Passwords[idx])
 		time.Sleep(1 * time.Second)
 	}

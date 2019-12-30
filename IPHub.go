@@ -12,9 +12,9 @@ import (
 
 // IPHub implemets the VPNApi interface and checks whether a given IP is a vpn
 type IPHub struct {
-	Client *http.Client
-	CooldownHandler
-	APIKey string
+	Client  *http.Client
+	Limiter *RateLimiter
+	APIKey  string
 }
 
 // Name : Get API Name
@@ -34,7 +34,7 @@ type iPHubResponseData struct {
 }
 
 // Fetch :
-func (ih IPHub) Fetch(IP string) (string, error) {
+func (ih *IPHub) Fetch(IP string) (string, error) {
 
 	headers := http.Header{}
 	headers.Add("X-Key", ih.APIKey)
@@ -69,7 +69,10 @@ func (ih IPHub) Fetch(IP string) (string, error) {
 }
 
 // IsVpn :
-func (ih IPHub) IsVpn(IP string) (bool, error) {
+func (ih *IPHub) IsVpn(IP string) (bool, error) {
+	if !ih.Limiter.Allow() {
+		return false, errors.New("API IPHub reached the daily limit")
+	}
 	body, err := ih.Fetch(IP)
 
 	if err != nil {

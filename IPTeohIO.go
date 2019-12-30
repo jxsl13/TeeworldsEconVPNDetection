@@ -12,8 +12,8 @@ import (
 
 // IPTeohIO implements the VPNApi and allows to check if an ip is a vpn
 type IPTeohIO struct {
-	Client *http.Client
-	CooldownHandler
+	Client  *http.Client
+	Limiter *RateLimiter
 }
 
 // Name : Get API Name
@@ -43,7 +43,7 @@ type iPTheohResponseDataString struct {
 }
 
 // Fetch :
-func (it IPTeohIO) Fetch(IP string) (string, error) {
+func (it *IPTeohIO) Fetch(IP string) (string, error) {
 
 	u, _ := url.Parse("https://ip.teoh.io/api/vpn/" + IP)
 	request, _ := http.NewRequest("GET", u.String(), nil)
@@ -58,7 +58,6 @@ func (it IPTeohIO) Fetch(IP string) (string, error) {
 	// status
 	status := response.StatusCode
 	if status != 200 {
-		it.IncreaseCooldown()
 		return "", errors.New("response code is not 200: " + strconv.Itoa(status))
 	}
 
@@ -89,9 +88,12 @@ func (it IPTeohIO) Fetch(IP string) (string, error) {
 }
 
 // IsVpn :
-func (it IPTeohIO) IsVpn(IP string) (bool, error) {
-	body, err := it.Fetch(IP)
+func (it *IPTeohIO) IsVpn(IP string) (bool, error) {
+	if !it.Limiter.Allow() {
+		return false, errors.New("API IPTeohIO reached the daily limit")
+	}
 
+	body, err := it.Fetch(IP)
 	if err != nil {
 		return false, err
 	} else if body == "yes" {

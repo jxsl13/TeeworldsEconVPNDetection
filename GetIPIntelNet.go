@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"log"
@@ -12,8 +13,8 @@ import (
 
 // GetIPIntelNet :
 type GetIPIntelNet struct {
-	Client *http.Client
-	CooldownHandler
+	Client    *http.Client
+	Limiter   *RateLimiter
 	Email     string
 	Threshold float64
 }
@@ -23,13 +24,39 @@ func (giin GetIPIntelNet) Name() string {
 	return "https://getipintel.net"
 }
 
+type getIPIntelResponseDataStatus struct {
+	Status string `json:"status"`
+}
+
+type getIPIntelResponseDataSuccess struct {
+	Status      string `json:"status"`
+	Result      string `json:"result"`
+	QueryIP     string `json:"queryIP"`
+	QueryFlags  string `json:"queryFlags"`
+	QueryFormat string `json:"queryFormat"`
+	Contact     string `json:"contact"`
+}
+
+type getIPIntelResponseDataError struct {
+	Status      string `json:"status"`
+	Result      string `json:"result"`
+	Message     string `json:"message"`
+	QueryIP     string `json:"queryIP"`
+	QueryFlags  string `json:"queryFlags"`
+	QueryFormat string `json:"queryFormat"`
+	Contact     string `json:"contact"`
+}
+
 // Fetch :
 func (giin GetIPIntelNet) Fetch(IP string) (string, error) {
+	u, _ := url.Parse("http://check.getipintel.net/check.php")
+
+	// build url query
 	params := url.Values{}
 	params.Add("ip", IP)
 	params.Add("contact", giin.Email)
+	params.Add("format", "json")
 
-	u, _ := url.Parse("http://check.getipintel.net/check.php")
 	u.RawQuery = params.Encode()
 
 	request, _ := http.NewRequest("GET", u.String(), nil)
@@ -41,49 +68,48 @@ func (giin GetIPIntelNet) Fetch(IP string) (string, error) {
 	}
 
 	// status
-	status := response.StatusCode
-
+	statusCode := response.StatusCode
 	// body
 	bytes, _ := ioutil.ReadAll(response.Body)
-	bodyText := string(bytes)
 
-	if status == 200 {
-		giin.ResetCooldown()
-		return bodyText, nil
-	} else if status == 400 {
+	if statusCode == 200 {
 
-		errorCode, _ := strconv.Atoi(bodyText)
-
-		switch errorCode {
-		case -1:
-			log.Println("GetIPIntelNet:", errorCode, "Invalid no input")
-		case -2:
-			log.Println("GetIPIntelNet:", errorCode, "Invalid IP address")
-		case -3:
-			log.Println("GetIPIntelNet:", errorCode, "Unroutable address / private address")
-		case -4:
-			log.Println("GetIPIntelNet:", errorCode, "Unable to reach database, most likely the database is being updated. Keep an eye on twitter for more information.")
-		case -5:
-			log.Println("GetIPIntelNet:", errorCode, "Your connecting IP has been banned from the system or you do not have permission to access a particular service. Did you exceed your query limits? Did you use an invalid email address? If you want more information, please use the contact links below.")
-		case -6:
-			log.Println("GetIPIntelNet:", errorCode, "You did not provide any contact information with your query or the contact information is invalid.")
-		default:
-			log.Println("GetIPIntelNet:", errorCode, "Unknown error code:", errorCode)
+		status := getIPIntelResponseDataStatus{}
+		err = json.Unmarshal(bytes, &status)
+		if err != nil {
+			return "", err
 		}
 
-	} else if status == 429 {
-		errorCode, _ := strconv.Atoi(bodyText)
-		log.Print("GetIPIntelNet:", errorCode, "If you exceed the number of allowed queries, you'll receive a HTTP 429 error.")
-	} else {
-		log.Println("GetIPIntelNet: Unknown response status code:", status)
+		if status.Status == "success" {
+			successJSON := getIPIntelResponseDataSuccess{}
+			err := json.Unmarshal(bytes, &successJSON)
+
+			if err != nil {
+				return "", errors.New("failed to unmarshal SUCCESS response message")
+			}
+
+			return successJSON.Result, nil
+		} else if status.Status == "error" {
+			errorJSON := getIPIntelResponseDataError{}
+			err := json.Unmarshal(bytes, &errorJSON)
+
+			if err != nil {
+				return "", errors.New("failed to unmarshal error response message")
+			}
+			return "", errors.New(errorJSON.Message)
+		}
 	}
-	giin.IncreaseCooldown()
-	fetchErr := errors.New("Failed fetching from GetIPIntelNet")
-	return "", fetchErr
+
+	return "", errors.New("Unknown response from api: " + string(bytes))
+
 }
 
 // IsVpn :
 func (giin GetIPIntelNet) IsVpn(IP string) (bool, error) {
+	if !giin.Limiter.Allow() {
+		return false, errors.New("API GetIPIntel reached the daily limit")
+	}
+
 	body, err := giin.Fetch(IP)
 	if err != nil {
 		log.Println(err.Error())

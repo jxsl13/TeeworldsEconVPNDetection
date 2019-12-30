@@ -74,7 +74,6 @@ func Login(reader io.Reader, writer io.Writer, password string) (bool, error) {
 			return false, err
 		}
 
-		//log.Println(confirmation)
 		return true, nil
 	}
 	return false, nil
@@ -102,8 +101,7 @@ func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Read
 
 		if err != nil {
 			log.Println("An error occurred while trying to read a line:", err.Error(), "(", address, ")")
-			time.Sleep(5 * time.Second)
-			continue
+			break
 		}
 
 		matches := regex.FindAllStringSubmatch(line, -1)
@@ -114,7 +112,7 @@ func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Read
 			isVPN, err := checker.IsVPN(IP)
 			if err != nil {
 				log.Println(err.Error())
-				continue
+				break
 			}
 
 			if isVPN {
