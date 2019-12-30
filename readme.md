@@ -1,6 +1,6 @@
 ## Requirements
  - Redis server for caching of IPs
- - .env file in te same folder as the executable
+ - .env file in the same folder as the executable
 
 ## Example .env
 This file needs to live within the same directory as yout executable.
