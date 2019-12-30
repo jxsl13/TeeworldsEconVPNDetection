@@ -5,7 +5,7 @@ This file needs to live within the same directory as yout executable.
 IPHUB_TOKEN=abcdefghijklmnopqrst0123456789
 EMAIL=john.doe@example.com
 
-SERVER_LIST=127.0.0.1:9303
+SERVER_LIST=127.0.0.1:9303 127.0.0.1:9304 127.0.0.1:9305
 PASSWORDS=abcdef0123456789
 RECONNECT_TIMEOUT_MINS=1440
 
@@ -16,7 +16,7 @@ REDIS_PASSWORD=
 VPN_BAN_TIME=1440
 VPN_BAN_REASON=VPN - discord.gg/ThGZ45e
 ```
-
+Either use one password for all servers or one password per server.
 
 ## Building
 ```
