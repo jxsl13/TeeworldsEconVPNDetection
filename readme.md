@@ -18,6 +18,11 @@ VPN_BAN_REASON=VPN - discord.gg/ThGZ45e
 ```
 Either use one password for all servers or one password per server.
 
+## Downloading dependencies
+```
+go get -d
+```
+
 ## Building
 ```
 go build .
