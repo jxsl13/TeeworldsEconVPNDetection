@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -117,7 +118,6 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
 }
 
 func main() {
-	//args := os.Args[1:]
 	var env map[string]string
 	env, err := godotenv.Read(".env")
 
@@ -148,6 +148,11 @@ func main() {
 	if len(GameServerAddresses) != len(Passwords) && len(Passwords) != 1 {
 		log.Println("Number of server addresses and passwords don't match. Either use one password for all servers or one password per server.")
 		return
+	} else if len(Passwords) == 1 {
+		// have as many passwords as server addresses
+		for len(Passwords) < len(GameServerAddresses) {
+			Passwords = append(Passwords, Passwords[0])
+		}
 	}
 
 	// share client with all apis
@@ -168,14 +173,24 @@ func main() {
 		apis}
 	defer rdb.Close() // close before return
 
-	CurrentServer := GameServerAddresses[0]
-	CurrentPassword := Passwords[0]
+	var wg sync.WaitGroup
 
-	caller := internalStandardCaller{CurrentPassword, rdb, env}
-	err = telnet.DialToAndCall(CurrentServer, caller)
-	if err != nil {
-		log.Println("Failed to connect to the remote server:", CurrentServer, err.Error())
-		return
+	callers := []*internalStandardCaller{}
+
+	for idx, server := range GameServerAddresses {
+		CurrentServer := server
+		CurrentPassword := Passwords[idx]
+
+		callers = append(callers, &internalStandardCaller{CurrentServer, CurrentPassword, rdb, env, &wg})
+
+		err = telnet.DialToAndCall(CurrentServer, callers[idx])
+		if err != nil {
+			log.Println("Failed to connect to the remote server:", CurrentServer, err.Error())
+			continue
+		} else {
+			wg.Add(1)
+		}
+
 	}
-
+	wg.Wait()
 }

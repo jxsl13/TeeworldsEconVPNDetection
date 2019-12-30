@@ -7,24 +7,22 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/reiver/go-telnet"
 )
 
-// TeeworldsCaller is a simple TELNET client which sends to the server any data it gets from os.Stdin
-// as TELNET (and TELNETS) data, and writes any TELNET (or TELNETS) data it receives from
-// the server to os.Stdout, and writes any error it has to os.Stderr.
-var TeeworldsCaller telnet.Caller = internalStandardCaller{}
-
 type internalStandardCaller struct {
-	Password string
-	Checker  VPNChecker
-	Env      map[string]string
+	Address   string
+	Password  string
+	Checker   VPNChecker
+	Env       map[string]string
+	WaitGroup *sync.WaitGroup
 }
 
 func (caller internalStandardCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
 
-	standardCallerCallTELNET(ctx, w, r, caller.Password, caller.Checker, caller.Env)
+	standardCallerCallTELNET(ctx, w, r, caller.Address, caller.Password, caller.Checker, caller.Env, caller.WaitGroup)
 }
 
 // ReadLine reads until a line is read from econ
@@ -83,15 +81,19 @@ func Login(reader io.Reader, writer io.Writer, password string) (bool, error) {
 	return false, nil
 }
 
-func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader, password string, checker VPNChecker, env map[string]string) {
+func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader, address string, password string, checker VPNChecker, env map[string]string, wg *sync.WaitGroup) {
+	// decrement when this routine is finished
+	defer wg.Done()
 
 	success, err := Login(r, w, password)
 	if !success && err == nil {
-		log.Println("Invalid Password:", password)
+		log.Println("Invalid Password:", password, "( Server IP:", address, ")")
 		return
 	} else if err != nil {
-		log.Println("Failed to log in:", err.Error())
+		log.Println("Failed to log in:", err.Error(), "( Server IP:", address, ")")
 		return
+	} else {
+		log.Println("Successfully connected to: ", address)
 	}
 
 	regex := regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})`)
