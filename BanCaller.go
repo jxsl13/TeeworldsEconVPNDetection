@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"io"
 	"log"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/reiver/go-telnet"
 )
@@ -21,8 +21,7 @@ type internalStandardCaller struct {
 }
 
 func (caller internalStandardCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
-
-	go standardCallerCallTELNET(ctx, w, r, caller.Address, caller.Password, caller.Checker, caller.Env, caller.WaitGroup)
+	standardCallerCallTELNET(ctx, w, r, caller.Address, caller.Password, caller.Checker, caller.Env, caller.WaitGroup)
 }
 
 // ReadLine reads until a line is read from econ
@@ -70,27 +69,27 @@ func Login(reader io.Reader, writer io.Writer, password string) (bool, error) {
 
 	if strings.Compare(line, "Enter password:\n") == 0 {
 		WriteLine(writer, password)
-		confirmation, err := ReadLine(reader)
+		_, err := ReadLine(reader)
 		if err != nil {
 			return false, err
 		}
 
-		log.Println(confirmation)
+		//log.Println(confirmation)
 		return true, nil
 	}
 	return false, nil
 }
 
 func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader, address string, password string, checker VPNChecker, env map[string]string, wg *sync.WaitGroup) {
-	// decrement when this routine is finished
-	defer wg.Done()
 
 	success, err := Login(r, w, password)
 	if !success && err == nil {
 		log.Println("Invalid Password:", password, "( Server IP:", address, ")")
+		time.Sleep(1 * time.Second)
 		return
 	} else if err != nil {
 		log.Println("Failed to log in:", err.Error(), "( Server IP:", address, ")")
+		time.Sleep(1 * time.Second)
 		return
 	} else {
 		log.Println("Successfully connected to: ", address)
@@ -99,7 +98,13 @@ func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Read
 	regex := regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})`)
 
 	for {
-		line, _ := ReadLine(r)
+		line, err := ReadLine(r)
+
+		if err != nil {
+			log.Println("An error occurred while trying to read a line:", err.Error(), "(", address, ")")
+			time.Sleep(5 * time.Second)
+			continue
+		}
 
 		matches := regex.FindAllStringSubmatch(line, -1)
 		if len(matches) > 0 {
@@ -120,12 +125,6 @@ func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Read
 			}
 		}
 	}
-}
 
-func scannerSplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF {
-		return 0, nil, nil
-	}
-
-	return bufio.ScanLines(data, atEOF)
+	log.Println("Closed connection to: ", address)
 }

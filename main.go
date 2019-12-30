@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -89,7 +90,6 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
 
 	IP := net.ParseIP(sIP).To4().String()
-	log.Println(IP)
 	if IP == "<nil>" {
 		return false, errors.New("Invalid IP passed, expexted IPv4")
 	}
@@ -133,6 +133,10 @@ func main() {
 	RedisPassword := env["REDIS_PASSWORD"]
 	GameServerAddresses := strings.Split(env["SERVER_LIST"], " ")
 	Passwords := strings.Split(env["PASSWORDS"], " ")
+	ReconnectTimeoutMinutes, err := strconv.Atoi(env["RECONNECT_TIMEOUT_MINS"])
+	if err != nil || ReconnectTimeoutMinutes <= 0 {
+		ReconnectTimeoutMinutes = 60
+	}
 
 	if RedisAddress == "" {
 		RedisAddress = "localhost:6379"
@@ -173,24 +177,41 @@ func main() {
 		apis}
 	defer rdb.Close() // close before return
 
+	// block main thread until goroutines finish execution
 	var wg sync.WaitGroup
 
-	callers := []*internalStandardCaller{}
+	// wraps the call in order to handle errors
+	Run := func(CurrentServer string, CurrentPassword string) {
+		// call on return
+		defer wg.Done()
 
-	for idx, server := range GameServerAddresses {
-		CurrentServer := server
-		CurrentPassword := Passwords[idx]
+		reconnectTimer := time.Second
+		for {
+			log.Println("Starting routine for server: ", CurrentServer)
+			err := telnet.DialToAndCall(CurrentServer, internalStandardCaller{CurrentServer, CurrentPassword, rdb, env, &wg})
+			if err != nil {
+				log.Println("Could not connect to server:", CurrentServer)
 
-		callers = append(callers, &internalStandardCaller{CurrentServer, CurrentPassword, rdb, env, &wg})
+				// sleep before retrying
+				time.Sleep(reconnectTimer)
 
-		err = telnet.DialToAndCall(CurrentServer, callers[idx])
-		if err != nil {
-			log.Println("Failed to connect to the remote server:", CurrentServer, err.Error())
-			continue
-		} else {
-			wg.Add(1)
+				// double timer on each attempt
+				reconnectTimer *= 2
+
+				// if we exceed a threshold, stop the goroutine
+				if reconnectTimer > time.Minute*time.Duration(ReconnectTimeoutMinutes) {
+					log.Println("Exceeded reconnect timeout, stopping routine:", CurrentServer)
+					break
+				}
+			}
 		}
+	}
 
+	for idx, CurrentServer := range GameServerAddresses {
+
+		wg.Add(1)
+		go Run(CurrentServer, Passwords[idx])
+		time.Sleep(1 * time.Second)
 	}
 	wg.Wait()
 }
