@@ -3,7 +3,7 @@
  - .env file in the same folder as the executable
 
 ## Example .env
-This file needs to live within the same directory as yout executable.
+This file needs to live within the same directory as your executable.
 ```
 # .env
 IPHUB_TOKEN=abcdefghijklmnopqrst0123456789
