@@ -22,7 +22,7 @@ type internalStandardCaller struct {
 
 func (caller internalStandardCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
 
-	standardCallerCallTELNET(ctx, w, r, caller.Address, caller.Password, caller.Checker, caller.Env, caller.WaitGroup)
+	go standardCallerCallTELNET(ctx, w, r, caller.Address, caller.Password, caller.Checker, caller.Env, caller.WaitGroup)
 }
 
 // ReadLine reads until a line is read from econ
