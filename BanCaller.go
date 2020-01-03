@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"regexp"
@@ -117,7 +118,8 @@ func standardCallerCallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Read
 
 			if isVPN {
 				log.Println("[vpn] IP [is a vpn] :", IP)
-				WriteLine(w, "ban "+ID+" "+env["VPN_BAN_TIME"]+" "+env["VPN_BAN_REASON"])
+				banCommand := fmt.Sprintf("ban %s %s %s", ID, env["VPN_BAN_TIME"], env["VPN_BAN_REASON"])
+				WriteLine(w, banCommand)
 			} else {
 				log.Println("[vpn] IP [not a vpn]:", IP)
 			}
