@@ -7,9 +7,24 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"strconv"
+	"time"
 )
+
+var (
+	errFailedUnmarshalSuccess = errors.New("failed to unmarshal success response")
+	errFailedUnmarshalError   = errors.New("failed to unmarshal error response")
+)
+
+// NewGetIPIntelNet creates a new API endpoint that can be checked for VPN IPs
+func NewGetIPIntelNet(c *http.Client, mail email, threshold float64) *GetIPIntelNet {
+	return &GetIPIntelNet{
+		Client:    c,
+		Limiter:   NewRateLimiter(24*time.Hour, 500),
+		Email:     string(mail),
+		Threshold: threshold,
+	}
+}
 
 // GetIPIntelNet :
 type GetIPIntelNet struct {
@@ -19,8 +34,8 @@ type GetIPIntelNet struct {
 	Threshold float64
 }
 
-// Name : Get API Name
-func (giin GetIPIntelNet) Name() string {
+// String returns the endpoint name
+func (giin GetIPIntelNet) String() string {
 	return "https://getipintel.net"
 }
 
@@ -48,7 +63,7 @@ type getIPIntelResponseDataError struct {
 }
 
 // Fetch :
-func (giin GetIPIntelNet) Fetch(IP string) (string, error) {
+func (giin *GetIPIntelNet) Fetch(IP string) (string, error) {
 	u, _ := url.Parse("http://check.getipintel.net/check.php")
 
 	// build url query
@@ -63,7 +78,6 @@ func (giin GetIPIntelNet) Fetch(IP string) (string, error) {
 	response, err := giin.Client.Do(request)
 
 	if err != nil {
-		debug.PrintStack()
 		return "", err
 	}
 
@@ -104,8 +118,8 @@ func (giin GetIPIntelNet) Fetch(IP string) (string, error) {
 
 }
 
-// IsVpn :
-func (giin GetIPIntelNet) IsVpn(IP string) (bool, error) {
+// IsVPN tests a given IP if it's a known VPN
+func (giin *GetIPIntelNet) IsVPN(IP string) (bool, error) {
 	if !giin.Limiter.Allow() {
 		return false, errors.New("API GetIPIntel reached the daily limit")
 	}

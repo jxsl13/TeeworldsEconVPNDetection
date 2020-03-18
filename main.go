@@ -1,129 +1,27 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"flag"
+	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"strconv"
-	"strings"
-	"sync"
+	"os"
+	"os/signal"
+	"regexp"
+	"syscall"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/joho/godotenv"
-	"github.com/reiver/go-telnet"
+	"github.com/jxsl13/twapi/econ"
 )
 
-// Valid is used to represent the answer of an api endpoint
-type Valid struct {
-	IsValid bool
-	Value   bool
-}
+var (
+	config          = Config{}
+	playerJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})`)
+)
 
-// VPNChecker encapsulates the redis database as cache and the
-// implemented api endpoints in order to determine, whether an ip is a vpn based on
-// either the caching information or based on the implemented api endpoints, whether
-// an ip is a vpn.
-type VPNChecker struct {
-	*redis.Client
-	Apis []VpnAPI
-}
+func init() {
 
-//
-func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool) {
-	found = false
-	isVPN = false
-
-	rResult, rErr := rdb.Ping().Result()
-
-	if rErr != nil && rResult != "PONG" {
-		log.Println("[redis]: could not connect to the redis database, caching disabled!")
-		return
-	}
-
-	sIsVPN, err := rdb.Get(sIP).Result()
-	if err != nil {
-		return
-	}
-
-	found = true
-	isVPN = sIsVPN == "1"
-	return
-}
-
-func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
-	IsVPN = false
-
-	results := make([]Valid, len(rdb.Apis))
-
-	for idx, api := range rdb.Apis {
-
-		isVPNTmp, err := api.IsVpn(sIP)
-
-		if err != nil {
-			log.Println("[ERROR]:", err.Error())
-			results[idx] = Valid{false, false}
-			continue
-		}
-
-		results[idx] = Valid{true, isVPNTmp}
-	}
-
-	total := 0.0
-	trueValue := 0.0
-	for _, valid := range results {
-		if valid.IsValid {
-			total += 1.0
-			if valid.Value {
-				trueValue += 1.0
-			}
-		}
-	}
-
-	if total == 0.0 {
-		log.Println("[ERROR]: All APIs seem to have exceeded their rate limitations.")
-		IsVPN = false
-		return
-	}
-	percentage := trueValue / total
-
-	IsVPN = percentage >= 0.6
-	return
-}
-
-// IsVPN checks firstly in cache and then online.
-func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
-
-	IP := net.ParseIP(sIP).To4().String()
-	if IP == "<nil>" {
-		return false, errors.New("Invalid IP passed, expexted IPv4")
-	}
-
-	found, isCacheVPN := rdb.foundInCache(IP)
-
-	if found {
-		return isCacheVPN, nil
-	}
-
-	isOnlineVPN := rdb.foundOnline(IP)
-
-	pong, err := rdb.Ping().Result()
-
-	if err == nil && pong == "PONG" {
-		if isOnlineVPN {
-			// forever vpn
-			rdb.Set(IP, true, 0)
-		} else {
-			// for one week no vpn
-			rdb.Set(IP, false, 24*7*time.Hour)
-		}
-	}
-
-	return isOnlineVPN, nil
-}
-
-func main() {
 	var env map[string]string
 	env, err := godotenv.Read(".env")
 
@@ -132,110 +30,113 @@ func main() {
 		return
 	}
 
-	// retrieved from .env file
-	IPHubToken := env["IPHUB_TOKEN"]
-	Email := env["EMAIL"]
-	RedisAddress := env["REDIS_ADDRESS"]
-	RedisPassword := env["REDIS_PASSWORD"]
-	GameServerAddresses := strings.Split(env["SERVER_LIST"], " ")
-	Passwords := strings.Split(env["PASSWORDS"], " ")
-	ReconnectTimeoutMinutes, err := strconv.Atoi(env["RECONNECT_TIMEOUT_MINS"])
-	if err != nil || ReconnectTimeoutMinutes <= 0 {
-		ReconnectTimeoutMinutes = 60
+	config, err = NewConfig(env)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
+}
 
-	if RedisAddress == "" {
-		RedisAddress = "localhost:6379"
-	}
-	if len(GameServerAddresses) == 0 {
-		log.Println("Please add a 'SERVER_LIST=127.0.0.1:1234 127.0.0.1:5678 ...' to your .env file!")
-		return
-	}
-	if len(Passwords) == 0 {
-		log.Println("Please add a 'PASSWORDS=12345 PA$$W0RD ...' to your .env file!")
-		return
-	}
-	if len(GameServerAddresses) != len(Passwords) && len(Passwords) != 1 {
-		log.Println("Number of server addresses and passwords don't match. Either use one password for all servers or one password per server.")
-		return
-	} else if len(Passwords) == 1 {
-		// have as many passwords as server addresses
-		for len(Passwords) < len(GameServerAddresses) {
-			Passwords = append(Passwords, Passwords[0])
+func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
+
+	matches := playerJoinRegex.FindStringSubmatch(line)
+	if len(matches) > 0 {
+		ID := matches[1]
+		IP := matches[2]
+
+		isVPN, err := checker.IsVPN(IP)
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+
+		if isVPN {
+			minutes := int(config.VPNBanTime.Minutes())
+			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, config.VPNBanReason))
+			log.Println("[is a vpn] :", IP)
+		} else {
+			log.Println("[not a vpn]:", IP)
 		}
 	}
+}
 
-	// share client with all apis
-	httpClient := &http.Client{}
+func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr address, pw password) {
 
-	dailyRequestLimits := []int{
-		500,  // 500 api calls per day - GetIPIntel
-		1000, // 1000 api calls per day - IPHub
-		1000, // 1000 api calls per day - ip.teoh.io
+	econ, err := econ.DialTo(string(addr), string(pw))
+	if err != nil {
+		log.Printf("Could not connect to %s, error: %s", addr, err.Error())
+		return
 	}
+	defer econ.Close()
 
-	var dailytLimits []*RateLimiter
-	for _, dailyRequestLimit := range dailyRequestLimits {
-		dailytLimits = append(dailytLimits, NewRateLimiter(24*time.Hour, dailyRequestLimit))
-	}
+	reconnectTimer := time.Second
+	retries := 0
 
-	// list of posisble apis to use
-	apis := []VpnAPI{
-		&GetIPIntelNet{httpClient, dailytLimits[0], Email, 0.9}, // 500 api calls per day
-		&IPHub{httpClient, dailytLimits[1], IPHubToken},         // 1000 api calls per day
-		&IPTeohIO{httpClient, dailytLimits[2]},                  // 1000  api calls per day
-	}
+	for {
+		if retries == 0 {
+			log.Println("Connected to server:", addr)
+		} else {
+			log.Println("Retrying to connect to server:", addr)
+		}
 
-	rdb := VPNChecker{redis.NewClient(&redis.Options{
-		Addr:     RedisAddress,
-		Password: RedisPassword,
-		DB:       0, // use default DB
-	}),
-		apis}
-	defer rdb.Close() // close before return
-
-	// block main thread until goroutines finish execution
-	var wg sync.WaitGroup
-
-	// wraps the call in order to handle errors
-	Run := func(CurrentServer string, CurrentPassword string) {
-		// call on return
-		defer wg.Done()
-
-		reconnectTimer := time.Second
-		retries := 0
+	parseLine:
 		for {
-			if retries == 0 {
-				log.Println("Connecting to server:", CurrentServer)
-			} else {
-				log.Println("Retrying to connect to server:", CurrentServer)
+
+			select {
+			case <-ctx.Done():
+				log.Printf("Closing connection to %s", addr)
+				return
+			default:
+				line, err := econ.ReadLine()
+				if err != nil {
+					log.Printf("Lost connection to %s, error: %s", addr, err.Error())
+					break parseLine
+				}
+				go parseLine(econ, checker, line)
 			}
 
-			err := telnet.DialToAndCall(CurrentServer, internalStandardCaller{CurrentServer, CurrentPassword, rdb, env, &wg})
-			if err != nil {
-				log.Println("Could not connect to server:", CurrentServer)
+		}
 
-				// sleep before retrying
-				time.Sleep(reconnectTimer)
+		select {
+		case <-ctx.Done():
+			log.Println("Closing connection to", addr)
+			return
+		case <-time.After(reconnectTimer):
+			// sleep before retrying
+			time.Sleep(reconnectTimer)
 
-				// double timer on each attempt
-				reconnectTimer *= 2
+			// double timer on each attempt
+			reconnectTimer *= 2
 
-				// if we exceed a threshold, stop the goroutine
-				if reconnectTimer > time.Minute*time.Duration(ReconnectTimeoutMinutes) {
-					log.Println("Exceeded reconnect timeout, stopping routine:", CurrentServer)
-					break
-				}
+			// if we exceed a threshold, stop the goroutine
+			if reconnectTimer > config.ReconnectTimeout {
+				log.Println("Exceeded reconnect timeout, stopping routine:", addr)
+				return
 			}
 			retries++
 		}
 	}
 
-	wg.Add(len(GameServerAddresses))
+}
+
+func main() {
+
+	textFile := ""
+	flag.StringVar(&textFile, "f", "", "pass a text file with IPs and IP subnets")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	checker := NewVPNChecker(&config)
+
 	// start goroutines
-	for idx, CurrentServer := range GameServerAddresses {
-		go Run(CurrentServer, Passwords[idx])
-		time.Sleep(1 * time.Second)
+	for idx, addr := range config.EconServers {
+		go econEvaluationRoutine(ctx, checker, addr, config.EconPasswords[idx])
 	}
-	wg.Wait()
+
+	// block main goroutine until the application receives a signal
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
+	cancel()
+	log.Println("Shutting down...")
+
 }

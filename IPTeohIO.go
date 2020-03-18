@@ -6,9 +6,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"strconv"
+	"time"
 )
+
+func NewIPTeohIO(c *http.Client) *IPTeohIO {
+	return &IPTeohIO{
+		Client: c, 
+		Limiter: NewRateLimiter(24 * time.Hour, 1000),
+	}
+}
 
 // IPTeohIO implements the VPNApi and allows to check if an ip is a vpn
 type IPTeohIO struct {
@@ -16,8 +23,8 @@ type IPTeohIO struct {
 	Limiter *RateLimiter
 }
 
-// Name : Get API Name
-func (it IPTeohIO) Name() string {
+// String implements the stinger interface
+func (it IPTeohIO) String() string {
 	return "https://ip.teoh.io"
 }
 
@@ -51,7 +58,6 @@ func (it *IPTeohIO) Fetch(IP string) (string, error) {
 	response, err := it.Client.Do(request)
 
 	if err != nil {
-		debug.PrintStack()
 		return "", err
 	}
 
@@ -87,8 +93,7 @@ func (it *IPTeohIO) Fetch(IP string) (string, error) {
 	return "no", nil
 }
 
-// IsVpn :
-func (it *IPTeohIO) IsVpn(IP string) (bool, error) {
+func (it *IPTeohIO) IsVPN(IP string) (bool, error) {
 	if !it.Limiter.Allow() {
 		return false, errors.New("API IPTeohIO reached the daily limit")
 	}
