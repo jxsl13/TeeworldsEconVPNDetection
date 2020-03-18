@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/joho/godotenv"
 	"github.com/jxsl13/twapi/econ"
 )
@@ -116,13 +118,48 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 			retries++
 		}
 	}
+}
 
+func parseFileAndAddIPsToCache(filename string) (int, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0, err
+	}
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
+	defer r.Close()
+
+	foundIPs := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+
+		ips := parseIPLine(scanner.Text())
+		foundIPs += len(ips)
+
+		for _, ip := range ips {
+			r.Set(ip, true, 0) // Add VPN IP to cache.
+		}
+	}
+	return foundIPs, nil
 }
 
 func main() {
 
 	textFile := ""
 	flag.StringVar(&textFile, "f", "", "pass a text file with IPs and IP subnets")
+	flag.Parse()
+
+	// If flag passed, add parsed ips to database.
+	if textFile != "" {
+		foundIPs, err := parseFileAndAddIPsToCache(textFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("Added %d VPN IPs to the redis cache.", foundIPs)
+		return
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	checker := NewVPNChecker(&config)
@@ -138,5 +175,4 @@ func main() {
 	<-sc
 	cancel()
 	log.Println("Shutting down...")
-
 }

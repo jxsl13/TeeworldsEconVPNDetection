@@ -75,6 +75,24 @@ go build .
 ./TeeworldsEconVPNDetectionGo
 ```
 
+## Add IPs from IPv4 text file
+In order for this to work, you need to have a properly configured setup with a `.env` file.
+Given a file with conents like:
+```
+1.0.69.27
+1.236.132.203
+2.56.92.0/22
+2.56.140.0/24
+```
+You can automatically add all of those IPs and the IPs from the subnets to your redis cache.
+In order for such a file to be parsed, you can pass it on startup to the application like this:
+```
+./TeeworldsEconVPNDetectionGo -f ips.txt 
+```
+After all of the IPs have been parsed and added to the cache, the application shuts down.
+You need to restart it without the flag in order to have the econ VPN detection behavior.
+
+
 ## Troubleshooting
 
 ##### EOF error
