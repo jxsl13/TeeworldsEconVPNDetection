@@ -69,7 +69,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 		isVPNTmp, err := api.IsVPN(sIP)
 
 		if err != nil {
-			log.Println("[ERROR]:", err.Error())
+			log.Println("[ERROR]:", api.String(), ":", err.Error())
 			results[idx] = Valid{false, false}
 			continue
 		}
