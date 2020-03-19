@@ -145,19 +145,55 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 	return foundIPs, nil
 }
 
+func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0, err
+	}
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
+	defer r.Close()
+
+	foundIPs := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+
+		ips := parseIPLine(scanner.Text())
+		foundIPs += len(ips)
+
+		for _, ip := range ips {
+			r.Del(ip)
+		}
+	}
+	return foundIPs, nil
+}
+
 func main() {
 
-	textFile := ""
-	flag.StringVar(&textFile, "f", "", "pass a text file with IPs and IP subnets")
+	addFile := ""
+	removeFile := ""
+	flag.StringVar(&addFile, "add", "", "pass a text file with IPs and IP subnets to be added to the database")
+	flag.StringVar(&removeFile, "remove", "", "pass a text file with IPs and IP subnets to be removed from the database")
 	flag.Parse()
 
 	// If flag passed, add parsed ips to database.
-	if textFile != "" {
-		foundIPs, err := parseFileAndAddIPsToCache(textFile)
+	if addFile != "" {
+		foundIPs, err := parseFileAndAddIPsToCache(addFile)
 		if err != nil {
 			fmt.Println(err)
 		}
 		fmt.Printf("Added %d VPN IPs to the redis cache.", foundIPs)
+		return
+	}
+
+	if removeFile != "" {
+		foundIPs, err := parseFileAndRemoveIPsFromCache(removeFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("Removed %d IPs from the redis cache.", foundIPs)
 		return
 	}
 

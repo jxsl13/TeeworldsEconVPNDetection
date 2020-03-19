@@ -81,15 +81,22 @@ go build .
 In order for this to work, you need to have a properly configured setup with a `.env` file.
 Given a file with conents like:
 ```
-1.0.69.27
 1.236.132.203
-2.56.92.0/22
-2.56.140.0/24
+
+# this adds/removes 2.56.0.1 through 2.56.255.254 to the database
+2.56.92.0/16
+
+# this adds/removes the IPs 2.56.140.1 through 2.56.140.254 to the database
+2.56.140.0/24 
 ```
 You can automatically add all of those IPs and the IPs from the subnets to your redis cache.
 In order for such a file to be parsed, you can pass it on startup to the application like this:
 ```
-./TeeworldsEconVPNDetectionGo -f ips.txt 
+# add IPs that are supposed to be banned to the database
+./TeeworldsEconVPNDetectionGo -add ips.txt
+
+# remove IPs from the database
+./TeeworldsEconVPNDetectionGo -remove ips.txt 
 ```
 You can use the `ip-v4.txt` from [VPNs](https://github.com/ejrv/VPNs).
 It can take up to a few hours for all of those ~100 million IPs to be added to your redis database.
