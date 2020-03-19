@@ -77,7 +77,7 @@ go build .
 ./TeeworldsEconVPNDetectionGo
 ```
 
-## Add IPs from IPv4 text file
+## Add/Remove IPs from IPv4 text file to/from the Redis database
 In order for this to work, you need to have a properly configured setup with a `.env` file.
 Given a file with conents like:
 ```
