@@ -86,7 +86,7 @@ Given a file with conents like:
 # this adds/removes 2.56.0.1 through 2.56.255.254 to the database
 2.56.92.0/16
 
-# this adds/removes the IPs 2.56.140.1 through 2.56.140.254 to the database
+# this adds/removes the IPs 2.56.140.1 through 2.56.140.254 from the database
 2.56.140.0/24 
 ```
 You can automatically add all of those IPs and the IPs from the subnets to your redis cache.
