@@ -138,9 +138,11 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 		ips := parseIPLine(scanner.Text())
 		foundIPs += len(ips)
 
+		transaction := r.TxPipeline()
 		for _, ip := range ips {
-			r.Set(ip, true, 0) // Add VPN IP to cache.
+			transaction.Set(ip, true, 0) // Add VPN IP to cache.
 		}
+		transaction.Exec()
 	}
 	return foundIPs, nil
 }
@@ -163,9 +165,11 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 		ips := parseIPLine(scanner.Text())
 		foundIPs += len(ips)
 
+		transaction := r.TxPipeline()
 		for _, ip := range ips {
-			r.Del(ip)
+			transaction.Del(ip)
 		}
+		transaction.Exec()
 	}
 	return foundIPs, nil
 }
