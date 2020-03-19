@@ -19,7 +19,7 @@ import (
 
 var (
 	config          = Config{}
-	playerJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})`)
+	playerJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
 )
 
 func init() {
