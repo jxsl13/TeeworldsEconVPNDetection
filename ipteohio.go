@@ -10,10 +10,11 @@ import (
 	"time"
 )
 
+// NewIPTeohIO creates a new api endpoint that can check IPs for whether they are VPNs or not.
 func NewIPTeohIO(c *http.Client) *IPTeohIO {
 	return &IPTeohIO{
-		Client: c, 
-		Limiter: NewRateLimiter(24 * time.Hour, 1000),
+		Client:  c,
+		Limiter: NewRateLimiter(24*time.Hour, 1000),
 	}
 }
 
@@ -93,6 +94,7 @@ func (it *IPTeohIO) Fetch(IP string) (string, error) {
 	return "no", nil
 }
 
+// IsVPN requests the api endpoint to test whether an IP is a VPN
 func (it *IPTeohIO) IsVPN(IP string) (bool, error) {
 	if !it.Limiter.Allow() {
 		return false, errors.New("API IPTeohIO reached the daily limit")

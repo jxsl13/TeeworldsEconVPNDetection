@@ -10,6 +10,9 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// NewVPNChecker creates a new checker that can be asked for VPN IPs.
+// it connects to the redis database for caching and requests information from all existing
+// API endpoints that provode free VPN detections.
 func NewVPNChecker(cfg *Config) *VPNChecker {
 	// share client with all apis
 	httpClient := &http.Client{}
