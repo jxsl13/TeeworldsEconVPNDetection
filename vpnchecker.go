@@ -20,7 +20,6 @@ func NewVPNChecker(cfg *Config) *VPNChecker {
 		// share client with all apis
 		httpClient := &http.Client{}
 		apis = []VPN{
-			NewGetIPIntelNet(httpClient, cfg.Email, 0.95),
 			NewIPHub(httpClient, cfg.IPHubToken),
 			NewIPTeohIO(httpClient),
 		}
@@ -108,7 +107,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	}
 	percentage := trueValue / total
 
-	IsVPN = percentage >= 0.6
+	IsVPN = percentage >= 0.75
 	return
 }
 

@@ -6,26 +6,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/badoux/checkmail"
 	"github.com/go-redis/redis"
 )
 
 type address string  // ip:port
-type email string    // john.doe@example.com
 type token string    // long weird string
 type password string // password string
 
 var (
-	errEmailInvalid            = errors.New("you forgot to add the IPHUB_TOKEN")
-	errIPHubTokenMissing       = errors.New("The provided email is not valid")
-	errRedisDatabaseNotFound   = errors.New("could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is runing")
+	errIPHubTokenMissing       = errors.New("The IPHub api access key is missing, IPHUB_TOKEN")
+	errRedisDatabaseNotFound   = errors.New("could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is running")
 	errEconAddressesMissing    = errors.New("please provide some econ addresses in your .env configuration: 'ECON_LIST=127.0.0.1:1234 127.0.0.1:5678'")
 	errAddressPasswordMismatch = errors.New("the number of ECON_PASSWORD doesn't match the number of ECON_ADDRESSES, either provide one password for all addresses or one password per address")
 )
 
 // Config represents the application configuration
 type Config struct {
-	Email            email
 	IPHubToken       token
 	RedisAddress     address
 	RedisPassword    password
@@ -49,13 +45,6 @@ func NewConfig(env map[string]string) (Config, error) {
 		return cfg, errIPHubTokenMissing
 	}
 	cfg.IPHubToken = token(IPHubToken)
-
-	mail := env["EMAIL"]
-
-	if err := checkmail.ValidateFormat(mail); err != nil {
-		return cfg, errEmailInvalid
-	}
-	cfg.Email = email(mail)
 
 	RedisAddress := env["REDIS_ADDRESS"]
 	if RedisAddress == "" {

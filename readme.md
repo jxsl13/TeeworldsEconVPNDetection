@@ -38,9 +38,6 @@ This file needs to live within the same directory as your executable.
 # the api key can be found here: https://iphub.info/account (requires registration)
 IPHUB_TOKEN=abcdefghijklmnopqrst0123456789
 
-# use a proper email, it will most likely never be contacted, but in case you get a ban from GetIPIntel
-EMAIL=john.doe@example.com
-
 # econ addresses separated by one space
 ECON_ADDRESSES=127.0.0.1:9303 127.0.0.1:9304 127.0.0.1:9305
 
