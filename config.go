@@ -34,6 +34,7 @@ type Config struct {
 	ReconnectTimeout time.Duration
 	VPNBanTime       time.Duration
 	VPNBanReason     string
+	Offline          bool
 }
 
 // NewConfig creates a new configuration file based on

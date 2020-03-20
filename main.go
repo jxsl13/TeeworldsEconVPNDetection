@@ -180,6 +180,7 @@ func main() {
 	removeFile := ""
 	flag.StringVar(&addFile, "add", "", "pass a text file with IPs and IP subnets to be added to the database")
 	flag.StringVar(&removeFile, "remove", "", "pass a text file with IPs and IP subnets to be removed from the database")
+	flag.BoolVar(&config.Offline, "offline", false, "do not use the api endpoints, only rely on the cache")
 	flag.Parse()
 
 	// If flag passed, add parsed ips to database.
@@ -199,6 +200,10 @@ func main() {
 		}
 		fmt.Printf("Removed %d IPs from the redis cache.", foundIPs)
 		return
+	}
+
+	if config.Offline {
+		log.Println("The detection is running in offline mode, only cached IPs are banned.")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

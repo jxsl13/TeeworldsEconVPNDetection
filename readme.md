@@ -96,7 +96,10 @@ In order for such a file to be parsed, you can pass it on startup to the applica
 ./TeeworldsEconVPNDetectionGo -add ips.txt
 
 # remove IPs from the database
-./TeeworldsEconVPNDetectionGo -remove ips.txt 
+./TeeworldsEconVPNDetectionGo -remove ips.txt
+
+# run the detection in ofline mode. This allows basically to abuse the detection as a banserver.
+./TeeworldsEconVPNDetectionGo -offline
 ```
 You can use the `ip-v4.txt` from [VPNs](https://github.com/ejrv/VPNs).
 It can take up to a few hours for all of those ~100 million IPs to be added to your redis database.

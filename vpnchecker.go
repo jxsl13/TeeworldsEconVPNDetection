@@ -14,13 +14,16 @@ import (
 // it connects to the redis database for caching and requests information from all existing
 // API endpoints that provode free VPN detections.
 func NewVPNChecker(cfg *Config) *VPNChecker {
-	// share client with all apis
-	httpClient := &http.Client{}
 
-	apis := []VPN{
-		NewGetIPIntelNet(httpClient, cfg.Email, 0.95),
-		NewIPHub(httpClient, cfg.IPHubToken),
-		NewIPTeohIO(httpClient),
+	apis := []VPN{}
+	if !cfg.Offline {
+		// share client with all apis
+		httpClient := &http.Client{}
+		apis = []VPN{
+			NewGetIPIntelNet(httpClient, cfg.Email, 0.95),
+			NewIPHub(httpClient, cfg.IPHubToken),
+			NewIPTeohIO(httpClient),
+		}
 	}
 
 	return &VPNChecker{
@@ -29,7 +32,9 @@ func NewVPNChecker(cfg *Config) *VPNChecker {
 				Addr:     string(cfg.RedisAddress),
 				Password: string(cfg.RedisPassword),
 			}),
-		apis}
+		apis,
+		cfg.Offline,
+	}
 }
 
 // Valid is used to represent the answer of an api endpoint
@@ -44,7 +49,8 @@ type Valid struct {
 // an ip is a vpn.
 type VPNChecker struct {
 	*redis.Client
-	Apis []VPN
+	Apis    []VPN
+	Offline bool
 }
 
 //
@@ -63,7 +69,6 @@ func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool) {
 }
 
 func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
-	IsVPN = false
 
 	results := make([]Valid, len(rdb.Apis))
 
@@ -115,6 +120,12 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
 	if found {
 		log.Printf("[in cache]: %s", IP)
 		return isCacheVPN, nil
+	}
+
+	if rdb.Offline {
+		// if the detection is offline, cache only,
+		// caching of default no values makes no sense, so no caching here.
+		return false, nil
 	}
 
 	isOnlineVPN := rdb.foundOnline(IP)
