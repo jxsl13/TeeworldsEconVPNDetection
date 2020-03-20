@@ -88,6 +88,10 @@ Given a file with conents like:
 
 # this adds/removes the IPs 2.56.140.1 through 2.56.140.254 from the database
 2.56.140.0/24 
+
+123.0.0.1 # add any custom ban reason
+123.0.0.1/24 # also add any custom ban reason, # followed by text
+
 ```
 You can automatically add all of those IPs and the IPs from the subnets to your redis cache.
 In order for such a file to be parsed, you can pass it on startup to the application like this:
@@ -109,6 +113,7 @@ You need to restart it without the flag in order to have the econ VPN detection 
 
 ## Note
 Currently no IPv6 support.
+Add a `# ban reason` behind the IP or behind the IP range to add a custom ban reason.
 
 
 ## Troubleshooting

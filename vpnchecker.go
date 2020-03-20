@@ -54,9 +54,7 @@ type VPNChecker struct {
 }
 
 //
-func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool) {
-	found = false
-	isVPN = false
+func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason string) {
 
 	sIsVPN, err := rdb.Get(sIP).Result()
 	if err != nil {
@@ -64,7 +62,14 @@ func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool) {
 	}
 
 	found = true
-	isVPN = sIsVPN == "1"
+	if sIsVPN == "0" {
+		// not vpn or banned
+		return
+	}
+
+	// vpn
+	isVPN = true
+	reason = sIsVPN // either "1" or "text"
 	return
 }
 
@@ -108,28 +113,28 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 }
 
 // IsVPN checks firstly in cache and then online.
-func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
+func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 
 	IP := net.ParseIP(sIP).To4().String()
 	if IP == "<nil>" {
-		return false, errors.New("Invalid IP passed, expexted IPv4")
+		return false, "", errors.New("Invalid IP passed, expexted IPv4")
 	}
 
-	found, isCacheVPN := rdb.foundInCache(IP)
+	found, isCacheVPN, reason := rdb.foundInCache(IP)
 
 	if found {
-		log.Printf("[in cache]: %s", IP)
-		return isCacheVPN, nil
+		log.Printf("[in cache]: %s\n", IP)
+		return isCacheVPN, reason, nil
 	}
 
 	if rdb.Offline {
 		// if the detection is offline, cache only,
 		// caching of default no values makes no sense, so no caching here.
-		return false, nil
+		return false, "", nil
 	}
 
 	isOnlineVPN := rdb.foundOnline(IP)
-	log.Printf("[online]:  %s", IP)
+	log.Printf("[online]:  %s\n", IP)
 	// update cache values
 	if isOnlineVPN {
 		// forever vpn
@@ -139,5 +144,5 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, error) {
 		rdb.Set(IP, false, 24*7*time.Hour)
 	}
 
-	return isOnlineVPN, nil
+	return isOnlineVPN, "1", nil // reason 1 -> VPN
 }

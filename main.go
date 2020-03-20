@@ -46,19 +46,29 @@ func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
 		ID := matches[1]
 		IP := matches[2]
 
-		isVPN, err := checker.IsVPN(IP)
+		isVPN, reason, err := checker.IsVPN(IP)
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
 
+		// vpn is saved as 1, banserver bans as text
+		if isVPN && reason == "1" {
+			reason = config.VPNBanReason
+
+			minutes := int(config.VPNBanTime.Minutes())
+			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
+			log.Println("[is a vpn] :", IP, "(", reason, ")")
+			return
+		}
+
 		if isVPN {
 			minutes := int(config.VPNBanTime.Minutes())
-			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, config.VPNBanReason))
-			log.Println("[is a vpn] :", IP)
-		} else {
-			log.Println("[not a vpn]:", IP)
+			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
+			log.Println("[banserver]:", IP, "(", reason, ")")
+			return
 		}
+		log.Println("[valid]:", IP)
 	}
 }
 
@@ -66,7 +76,7 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 
 	econ, err := econ.DialTo(string(addr), string(pw))
 	if err != nil {
-		log.Printf("Could not connect to %s, error: %s", addr, err.Error())
+		log.Printf("Could not connect to %s, error: %s\n", addr, err.Error())
 		return
 	}
 	defer econ.Close()
@@ -86,12 +96,12 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 
 			select {
 			case <-ctx.Done():
-				log.Printf("Closing connection to %s", addr)
+				log.Printf("Closing connection to %s\n", addr)
 				return
 			default:
 				line, err := econ.ReadLine()
 				if err != nil {
-					log.Printf("Lost connection to %s, error: %s", addr, err.Error())
+					log.Printf("Lost connection to %s, error: %s\n", addr, err.Error())
 					break parseLine
 				}
 				go parseLine(econ, checker, line)
@@ -139,8 +149,10 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 		foundIPs += len(ips)
 
 		transaction := r.TxPipeline()
-		for _, ip := range ips {
-			transaction.Set(ip, true, 0) // Add VPN IP to cache.
+		for ip, reason := range ips {
+			// default reason = "1"
+			// custom reason = "text"
+			transaction.Set(ip, reason, 0) // Add IP to cache.
 		}
 		transaction.Exec()
 	}
@@ -189,7 +201,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Added %d VPN IPs to the redis cache.", foundIPs)
+		fmt.Printf("Added %d VPN IPs to the redis cache.\n", foundIPs)
 		return
 	}
 
@@ -198,7 +210,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Removed %d IPs from the redis cache.", foundIPs)
+		fmt.Printf("Removed %d IPs from the redis cache.\n", foundIPs)
 		return
 	}
 
