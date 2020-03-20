@@ -46,7 +46,10 @@ ECON_PASSWORDS=abcdef0123456789
 
 # each connection retries incrementally to reconnect to the server.
 # if the connection timeout is reached, the routine stops.
-RECONNECT_TIMEOUT_MINS=1440
+RECONNECT_TIMEOUT_MINS=5
+
+# retries to reconnect a lost connection after x seconds
+RECONNECT_DELAY_SECONDS=10
 
 # redis database credentials, these are the default values after installation
 REDIS_ADDRESS=localhost:6379

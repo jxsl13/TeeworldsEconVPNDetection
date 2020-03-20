@@ -27,6 +27,7 @@ type Config struct {
 	RedisPassword    password
 	EconServers      []address
 	EconPasswords    []password
+	ReconnectDelay   time.Duration
 	ReconnectTimeout time.Duration
 	VPNBanTime       time.Duration
 	VPNBanReason     string
@@ -102,9 +103,15 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	ReconnectTimeoutMinutes, err := strconv.Atoi(env["RECONNECT_TIMEOUT_MINS"])
 	if err != nil || ReconnectTimeoutMinutes <= 0 {
-		ReconnectTimeoutMinutes = 60
+		ReconnectTimeoutMinutes = 5
 	}
 	cfg.ReconnectTimeout = time.Minute * time.Duration(ReconnectTimeoutMinutes)
+
+	ReconnectDelaySeconds, err := strconv.Atoi(env["RECONNECT_DELAY_SECONDS"])
+	if err != nil || ReconnectDelaySeconds <= 0 {
+		ReconnectTimeoutMinutes = 10
+	}
+	cfg.ReconnectDelay = time.Second * time.Duration(ReconnectDelaySeconds)
 
 	cfg.VPNBanReason = env["VPN_BANREASON"]
 

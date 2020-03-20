@@ -81,7 +81,7 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 	}
 	defer econ.Close()
 
-	reconnectTimer := time.Second
+	accumulatedRetryTime := time.Duration(0)
 	retries := 0
 
 	for {
@@ -93,10 +93,9 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 
 	parseLine:
 		for {
-
 			select {
 			case <-ctx.Done():
-				log.Printf("Closing connection to %s\n", addr)
+				log.Printf("Closing connection to: %s\n", addr)
 				return
 			default:
 				line, err := econ.ReadLine()
@@ -111,17 +110,13 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr addres
 
 		select {
 		case <-ctx.Done():
-			log.Println("Closing connection to", addr)
+			log.Printf("Closing connection to: %s\n", addr)
 			return
-		case <-time.After(reconnectTimer):
-			// sleep before retrying
-			time.Sleep(reconnectTimer)
-
-			// double timer on each attempt
-			reconnectTimer *= 2
+		case <-time.After(config.ReconnectDelay):
+			accumulatedRetryTime += config.ReconnectDelay
 
 			// if we exceed a threshold, stop the goroutine
-			if reconnectTimer > config.ReconnectTimeout {
+			if accumulatedRetryTime > config.ReconnectTimeout {
 				log.Println("Exceeded reconnect timeout, stopping routine:", addr)
 				return
 			}
