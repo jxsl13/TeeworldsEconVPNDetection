@@ -140,7 +140,7 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 
-		ips := parseIPLine(scanner.Text())
+		ips := parseIPLine(scanner.Text(), "1")
 		foundIPs += len(ips)
 
 		transaction := r.TxPipeline()
@@ -169,7 +169,7 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 
-		ips := parseIPLine(scanner.Text())
+		ips := parseIPLine(scanner.Text(), "")
 		foundIPs += len(ips)
 
 		transaction := r.TxPipeline()
@@ -181,12 +181,41 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 	return foundIPs, nil
 }
 
+func parseFileAndWhiteListInCache(filename string) (int, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0, err
+	}
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
+	defer r.Close()
+
+	foundIPs := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+
+		ips := parseIPLine(scanner.Text(), "0")
+		foundIPs += len(ips)
+
+		transaction := r.TxPipeline()
+		for ip := range ips {
+			transaction.Set(ip, "0", 0) // Force whitelisting in cache
+		}
+		transaction.Exec()
+	}
+	return foundIPs, nil
+}
+
 func main() {
 
 	addFile := ""
 	removeFile := ""
+	whitelistFile := ""
 	flag.StringVar(&addFile, "add", "", "pass a text file with IPs and IP subnets to be added to the database")
 	flag.StringVar(&removeFile, "remove", "", "pass a text file with IPs and IP subnets to be removed from the database")
+	flag.StringVar(&whitelistFile, "whitelist", "", "whitelist these IPs forever in cache, meaning they will never be banned.")
 	flag.BoolVar(&config.Offline, "offline", false, "do not use the api endpoints, only rely on the cache")
 	flag.Parse()
 
@@ -206,6 +235,15 @@ func main() {
 			fmt.Println(err)
 		}
 		fmt.Printf("Removed %d IPs from the redis cache.\n", foundIPs)
+		return
+	}
+
+	if whitelistFile != "" {
+		foundIPs, err := parseFileAndWhiteListInCache(whitelistFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("Whitelisted %d IPs in the redis cache.\n", foundIPs)
 		return
 	}
 
