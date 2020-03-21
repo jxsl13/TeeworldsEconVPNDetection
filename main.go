@@ -173,7 +173,7 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 		foundIPs += len(ips)
 
 		transaction := r.TxPipeline()
-		for _, ip := range ips {
+		for ip := range ips {
 			transaction.Del(ip)
 		}
 		transaction.Exec()
