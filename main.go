@@ -37,6 +37,7 @@ func init() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	log.Println("Config .env loaded successfully.")
 }
 
 func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
@@ -130,8 +131,8 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	options := config.RedisOptions
-	r := redis.NewClient(options)
+
+	r := redis.NewClient(config.RedisOptions)
 	defer r.Close()
 
 	foundIPs := 0
