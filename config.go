@@ -24,7 +24,7 @@ var (
 // Config represents the application configuration
 type Config struct {
 	IPHubToken       token
-	RedisOptions     redis.Options
+	RedisOptions     *redis.Options
 	EconServers      []address
 	EconPasswords    []password
 	ReconnectDelay   time.Duration
@@ -65,13 +65,13 @@ func NewConfig(env map[string]string) (Config, error) {
 		RedisDB = 0
 	}
 
-	config.RedisOptions = redis.Options{
+	config.RedisOptions = &redis.Options{
 		Addr:     RedisAddress,
 		Password: RedisPassword,
 		DB:       RedisDB,
 	}
 
-	redisClient := redis.NewClient(&config.RedisOptions)
+	redisClient := redis.NewClient(config.RedisOptions)
 	defer redisClient.Close()
 
 	pong, err := redisClient.Ping().Result()
