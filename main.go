@@ -219,7 +219,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Added %d VPN IPs to the redis cache.\n", foundIPs)
+		fmt.Printf("Added %d VPN IPs to the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
 		return
 	}
 
@@ -228,7 +228,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Removed %d IPs from the redis cache.\n", foundIPs)
+		fmt.Printf("Removed %d IPs from the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
 		return
 	}
 
@@ -237,7 +237,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Whitelisted %d IPs in the redis cache.\n", foundIPs)
+		fmt.Printf("Whitelisted %d IPs in the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
 		return
 	}
 
