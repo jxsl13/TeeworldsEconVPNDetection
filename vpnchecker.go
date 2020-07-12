@@ -27,10 +27,7 @@ func NewVPNChecker(cfg *Config) *VPNChecker {
 
 	return &VPNChecker{
 		redis.NewClient(
-			&redis.Options{
-				Addr:     string(cfg.RedisAddress),
-				Password: string(cfg.RedisPassword),
-			}),
+			&config.RedisOptions),
 		apis,
 		cfg.Offline,
 	}

@@ -130,10 +130,7 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
-	})
+	r := redis.NewClient(&config.RedisOptions)
 	defer r.Close()
 
 	foundIPs := 0
@@ -159,10 +156,7 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
-	})
+	r := redis.NewClient(&config.RedisOptions)
 	defer r.Close()
 
 	foundIPs := 0
@@ -186,10 +180,7 @@ func parseFileAndWhiteListInCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
-	})
+	r := redis.NewClient(&config.RedisOptions)
 	defer r.Close()
 
 	foundIPs := 0
