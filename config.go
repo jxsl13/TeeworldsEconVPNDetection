@@ -61,7 +61,7 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	RedisDB, err := strconv.Atoi(RedisDBStr)
 	if err != nil {
-		log.Println("Selecting redis database:", RedisDB)
+		log.Println("Selecting redis database:", RedisDB, "error:", err.Error())
 		RedisDB = 0
 	}
 
@@ -71,6 +71,8 @@ func NewConfig(env map[string]string) (Config, error) {
 		DB:       RedisDB,
 	}
 
+	log.Printf("Redis config: %#v\n", &config.RedisOptions)
+
 	redisClient := redis.NewClient(&config.RedisOptions)
 	defer redisClient.Close()
 
@@ -78,9 +80,6 @@ func NewConfig(env map[string]string) (Config, error) {
 	if err != nil || pong != "PONG" {
 		return cfg, errRedisDatabaseNotFound
 	}
-
-	cfg.RedisOptions.Addr = RedisAddress
-	cfg.RedisOptions.Password = RedisPassword
 
 	EconAddresses := strings.Split(env["ECON_ADDRESSES"], " ")
 	if len(EconAddresses) == 0 {
