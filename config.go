@@ -26,6 +26,7 @@ type Config struct {
 	IPHubToken       token
 	RedisAddress     address
 	RedisPassword    password
+	RedisDB          int
 	EconServers      []address
 	EconPasswords    []password
 	ReconnectDelay   time.Duration
@@ -82,6 +83,7 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	cfg.RedisAddress = address(RedisAddress)
 	cfg.RedisPassword = password(RedisPassword)
+	cfg.RedisDB = RedisDB
 
 	EconAddresses := strings.Split(env["ECON_ADDRESSES"], " ")
 	if len(EconAddresses) == 0 {
