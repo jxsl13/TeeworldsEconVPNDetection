@@ -37,7 +37,6 @@ func init() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	log.Println("Config .env loaded successfully.")
 }
 
 func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
@@ -131,9 +130,10 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	op := config.RedisOptions
-	r := redis.NewClient(&op)
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
 	defer r.Close()
 
 	foundIPs := 0
@@ -159,9 +159,10 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	op := config.RedisOptions
-	r := redis.NewClient(&op)
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
 	defer r.Close()
 
 	foundIPs := 0
@@ -185,8 +186,10 @@ func parseFileAndWhiteListInCache(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	op := config.RedisOptions
-	r := redis.NewClient(&op)
+	r := redis.NewClient(&redis.Options{
+		Addr:     string(config.RedisAddress),
+		Password: string(config.RedisPassword),
+	})
 	defer r.Close()
 
 	foundIPs := 0
@@ -222,7 +225,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Added %d VPN IPs to the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
+		fmt.Printf("Added %d VPN IPs to the redis cache.\n", foundIPs)
 		return
 	}
 
@@ -231,7 +234,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Removed %d IPs from the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
+		fmt.Printf("Removed %d IPs from the redis cache.\n", foundIPs)
 		return
 	}
 
@@ -240,7 +243,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Whitelisted %d IPs in the redis(DB:%d) cache.\n", foundIPs, config.RedisOptions.DB)
+		fmt.Printf("Whitelisted %d IPs in the redis cache.\n", foundIPs)
 		return
 	}
 

@@ -24,7 +24,8 @@ var (
 // Config represents the application configuration
 type Config struct {
 	IPHubToken       token
-	RedisOptions     redis.Options
+	RedisAddress     address
+	RedisPassword    password
 	EconServers      []address
 	EconPasswords    []password
 	ReconnectDelay   time.Duration
@@ -61,24 +62,26 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	RedisDB, err := strconv.Atoi(RedisDBStr)
 	if err != nil {
-		log.Println("Selecting redis database:", RedisDB, "error:", err.Error())
+		log.Println("Selecting redis database:", RedisDB)
 		RedisDB = 0
 	}
 
-	config.RedisOptions = redis.Options{
+	options := redis.Options{
 		Addr:     RedisAddress,
 		Password: RedisPassword,
 		DB:       RedisDB,
 	}
 
-	op := config.RedisOptions
-	redisClient := redis.NewClient(&op)
+	redisClient := redis.NewClient(&options)
 	defer redisClient.Close()
 
 	pong, err := redisClient.Ping().Result()
 	if err != nil || pong != "PONG" {
 		return cfg, errRedisDatabaseNotFound
 	}
+
+	cfg.RedisAddress = address(RedisAddress)
+	cfg.RedisPassword = password(RedisPassword)
 
 	EconAddresses := strings.Split(env["ECON_ADDRESSES"], " ")
 	if len(EconAddresses) == 0 {
