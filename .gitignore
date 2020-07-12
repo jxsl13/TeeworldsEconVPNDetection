@@ -1,3 +1,4 @@
 .env
 TeeworldsEconVPNDetectionGo 
 *.txt
+.vscode/settings.json

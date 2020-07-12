@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -54,9 +55,21 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	RedisPassword := env["REDIS_PASSWORD"]
 
+	RedisDBStr := env["REDIS_DB_VPN"]
+	if RedisDBStr == "" {
+		RedisDBStr = "0"
+	}
+
+	RedisDB, err := strconv.Atoi(RedisDBStr)
+	if err != nil {
+		log.Println("Selecting redis database:", RedisDB)
+		RedisDB = 0
+	}
+
 	options := redis.Options{
 		Addr:     RedisAddress,
 		Password: RedisPassword,
+		DB:       RedisDB,
 	}
 
 	redisClient := redis.NewClient(&options)
