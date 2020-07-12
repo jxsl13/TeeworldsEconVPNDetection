@@ -71,8 +71,6 @@ func NewConfig(env map[string]string) (Config, error) {
 		DB:       RedisDB,
 	}
 
-	log.Printf("Redis config: %#v\n", &config.RedisOptions)
-
 	redisClient := redis.NewClient(&config.RedisOptions)
 	defer redisClient.Close()
 
