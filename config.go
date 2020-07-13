@@ -150,8 +150,10 @@ func NewConfig(env map[string]string) (Config, error) {
 	zCatchLogging := env["ZCATCH_LOGGING"]
 	switch zCatchLogging {
 	case "1", "true", "enable", "enabled", "on":
+		log.Println("Using zCatch log parsing.")
 		cfg.zCatchLogFormat = true
 	default:
+		log.Println("Using Teeworlds Vanilla log parsing.")
 		cfg.zCatchLogFormat = false
 	}
 
