@@ -18,8 +18,13 @@ import (
 )
 
 var (
-	config          = Config{}
-	playerJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
+	config = Config{}
+
+	// 0: full 1: ID 2: IP
+	playerVanillaJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
+
+	// 0: full 1: ID 2: IP 3: port 4: version 5: name 6: clan 7: country
+	playerzCatchJoinRegex = regexp.MustCompile(`id=([\d]+) addr=([a-fA-F0-9\.\:\[\]]+):([\d]+) version=(\d+) name='(.{0,20})' clan='(.{0,16})' country=([-\d]+)$`)
 )
 
 func init() {
@@ -40,36 +45,45 @@ func init() {
 }
 
 func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
+	matches := []string{}
 
-	matches := playerJoinRegex.FindStringSubmatch(line)
-	if len(matches) > 0 {
-		ID := matches[1]
-		IP := matches[2]
-
-		isVPN, reason, err := checker.IsVPN(IP)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-
-		// vpn is saved as 1, banserver bans as text
-		if isVPN && reason == "1" {
-			reason = config.VPNBanReason
-
-			minutes := int(config.VPNBanTime.Minutes())
-			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
-			log.Println("[is a vpn] :", IP, "(", reason, ")")
-			return
-		}
-
-		if isVPN {
-			minutes := int(config.VPNBanTime.Minutes())
-			econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
-			log.Println("[banserver]:", IP, "(", reason, ")")
-			return
-		}
-		log.Println("[valid]:", IP)
+	switch config.zCatchLogFormat {
+	case true:
+		matches = playerzCatchJoinRegex.FindStringSubmatch(line)
+	default:
+		matches = playerVanillaJoinRegex.FindStringSubmatch(line)
 	}
+
+	if len(matches) <= 0 {
+		return
+	}
+
+	IP := matches[2]
+
+	isVPN, reason, err := checker.IsVPN(IP)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
+	// vpn is saved as 1, banserver bans as text
+	if isVPN {
+		tag := "[banserver]:" // manually added with custom reason
+		ID := matches[1]
+		minutes := int(config.VPNBanTime.Minutes())
+
+		if reason == "1" {
+			tag = "[is a vpn] :" //
+			reason = config.VPNBanReason
+		}
+
+		econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
+		log.Println(tag, IP, "(", reason, ")")
+		return
+	}
+
+	log.Println("[clean IP]:", IP)
+
 }
 
 func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr address, pw password) {

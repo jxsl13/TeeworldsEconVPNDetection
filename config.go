@@ -16,9 +16,10 @@ type password string // password string
 
 var (
 	errIPHubTokenMissing       = errors.New("The IPHub api access key is missing, IPHUB_TOKEN")
-	errRedisDatabaseNotFound   = errors.New("could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is running")
-	errEconAddressesMissing    = errors.New("please provide some econ addresses in your .env configuration: 'ECON_LIST=127.0.0.1:1234 127.0.0.1:5678'")
-	errAddressPasswordMismatch = errors.New("the number of ECON_PASSWORD doesn't match the number of ECON_ADDRESSES, either provide one password for all addresses or one password per address")
+	errRedisDatabaseNotFound   = errors.New("Could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is running")
+	errEconAddressesMissing    = errors.New("Please provide some econ addresses in your .env configuration: 'ECON_LIST=127.0.0.1:1234 127.0.0.1:5678'")
+	errAddressPasswordMismatch = errors.New("The number of ECON_PASSWORD doesn't match the number of ECON_ADDRESSES, either provide one password for all addresses or one password per address")
+	errNoVPNBanReasonSpecified = errors.New("Please provide a non-empty VPN_BANREASON that is used as ban reason")
 )
 
 // Config represents the application configuration
@@ -34,6 +35,7 @@ type Config struct {
 	VPNBanTime       time.Duration
 	VPNBanReason     string
 	Offline          bool
+	zCatchLogFormat  bool
 }
 
 // NewConfig creates a new configuration file based on
@@ -51,6 +53,7 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	RedisAddress := env["REDIS_ADDRESS"]
 	if RedisAddress == "" {
+		log.Println("Using default REDIS_ADDRESS localhost:6379")
 		RedisAddress = "localhost:6379"
 	}
 
@@ -63,8 +66,8 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	RedisDB, err := strconv.Atoi(RedisDBStr)
 	if err != nil {
-		log.Println("Selecting redis database:", RedisDB)
 		RedisDB = 0
+		log.Println("Using redis database:", RedisDB)
 	}
 
 	options := redis.Options{
@@ -118,23 +121,39 @@ func NewConfig(env map[string]string) (Config, error) {
 
 	ReconnectTimeoutMinutes, err := strconv.Atoi(env["RECONNECT_TIMEOUT_MINS"])
 	if err != nil || ReconnectTimeoutMinutes <= 0 {
+		log.Println("Using default RECONNECT_TIMEOUT_MINS of 5 (minutes)")
 		ReconnectTimeoutMinutes = 5
 	}
 	cfg.ReconnectTimeout = time.Minute * time.Duration(ReconnectTimeoutMinutes)
 
 	ReconnectDelaySeconds, err := strconv.Atoi(env["RECONNECT_DELAY_SECONDS"])
 	if err != nil || ReconnectDelaySeconds <= 0 {
+		log.Println("Using default RECONNECT_DELAY_SECONDS of 10 (seconds)")
 		ReconnectTimeoutMinutes = 10
 	}
 	cfg.ReconnectDelay = time.Second * time.Duration(ReconnectDelaySeconds)
 
-	cfg.VPNBanReason = env["VPN_BANREASON"]
+	banReason, ok := env["VPN_BANREASON"]
+	if !ok {
+		return cfg, errNoVPNBanReasonSpecified
+	}
+	cfg.VPNBanReason = banReason
+	log.Println("General VPN ban reason(VPN_BANREASON):", cfg)
 
 	bantime, err := strconv.Atoi(env["VPN_BANTIME"])
 	if err != nil {
+		log.Println("Using default VPN_BANTIME of 5 (minutes)")
 		bantime = 5
 	}
 	cfg.VPNBanTime = time.Duration(bantime) * time.Minute
+
+	zCatchLogging := env["ZCATCH_LOGGING"]
+	switch zCatchLogging {
+	case "1", "true", "enable", "enabled", "on":
+		cfg.zCatchLogFormat = true
+	default:
+		cfg.zCatchLogFormat = false
+	}
 
 	return cfg, nil
 

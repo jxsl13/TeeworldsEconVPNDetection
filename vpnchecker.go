@@ -58,19 +58,16 @@ func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason 
 
 	sIsVPN, err := rdb.Get(sIP).Result()
 	if err != nil {
-		return
+		return false, false, ""
 	}
 
-	found = true
 	if sIsVPN == "0" {
 		// not vpn or banned
-		return
+		return true, false, ""
 	}
 
-	// vpn
-	isVPN = true
-	reason = sIsVPN // either "1" or "text"
-	return
+	// either "1" or "text ban reason"
+	return true, true, sIsVPN
 }
 
 func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {

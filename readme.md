@@ -68,7 +68,12 @@ REDIS_PASSWORD=
 
 # how many minutes the VPN IP is banned and with what reason.
 VPN_BANTIME=1440
-VPN_BANREASON=VPN - discord.gg/ThGZ45e
+VPN_BANREASON=VPN - discord.gg/123456
+
+# specific delayed banning that waits for a specific joining state, where all player information is 
+# already known to the zCatch server (enables zCatch specific log parsing: "1", "true", "enable", "enabled", "on")
+# any other value disables this parsing variant.
+ZCATCH_LOGGING=0
 
 
 ```
