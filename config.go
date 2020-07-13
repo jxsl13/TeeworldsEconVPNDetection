@@ -138,7 +138,7 @@ func NewConfig(env map[string]string) (Config, error) {
 		return cfg, errNoVPNBanReasonSpecified
 	}
 	cfg.VPNBanReason = banReason
-	log.Println("General VPN ban reason(VPN_BANREASON):", cfg)
+	log.Println("General VPN ban reason(VPN_BANREASON):", cfg.VPNBanReason)
 
 	bantime, err := strconv.Atoi(env["VPN_BANTIME"])
 	if err != nil {
