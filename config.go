@@ -46,7 +46,7 @@ func NewConfig(env map[string]string) (Config, error) {
 	// retrieved from .env file
 	IPHubToken := env["IPHUB_TOKEN"]
 
-	if len(IPHubToken) == 0 {
+	if IPHubToken == "" {
 		return cfg, errIPHubTokenMissing
 	}
 	cfg.IPHubToken = token(IPHubToken)
