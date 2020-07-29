@@ -54,7 +54,7 @@ type VPNChecker struct {
 }
 
 //
-func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason string) {
+func (rdb *VPNChecker) foundInCache(sIP string) (found, isVPN bool, reason string) {
 
 	sIsVPN, err := rdb.Get(sIP).Result()
 	if err != nil {

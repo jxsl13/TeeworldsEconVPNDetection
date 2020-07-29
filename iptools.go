@@ -20,7 +20,7 @@ var (
 
 // if the IP has no custom reason, the default reason is used.
 // in this case the default reason should be either "1" or "0"
-func parseIPLine(line string, defaultReason string) (ipsWithReasons map[string]string) {
+func parseIPLine(line, defaultReason string) (ipsWithReasons map[string]string) {
 	// 0.0.0.0 -> len = 7
 	if len(line) < 7 {
 		return nil
@@ -124,7 +124,7 @@ func ipsFromCIDR(cidr string) ([]string, error) {
 	return ips[1 : len(ips)-1], nil
 }
 
-func ipsFromRange(lowerBound string, upperBound string) ([]string, error) {
+func ipsFromRange(lowerBound, upperBound string) ([]string, error) {
 	lower := net.ParseIP(lowerBound)
 	upper := net.ParseIP(upperBound)
 	if lower == nil || upper == nil {
