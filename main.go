@@ -278,7 +278,7 @@ func main() {
 
 	// block main goroutine until the application receives a signal
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 	<-sc
 	cancel()
 	log.Println("Shutting down...")
