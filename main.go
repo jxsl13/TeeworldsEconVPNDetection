@@ -45,7 +45,7 @@ func init() {
 }
 
 func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
-	matches := []string{}
+	var matches []string
 
 	switch config.zCatchLogFormat {
 	case true:
