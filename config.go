@@ -86,7 +86,7 @@ func (c *Config) Options() configo.Options {
 		},
 		{
 			Key:             "RECONNECT_TIMEOUT",
-			DefaultValue:    "5m",
+			DefaultValue:    "24h",
 			Description:     "after how much time a reconnect is concidered not feasible (default: 5m, may use 1h5m10s500ms)",
 			ParseFunction:   parsers.Duration(&c.ReconnectTimeout),
 			UnparseFunction: unparsers.Duration(&c.ReconnectTimeout),
