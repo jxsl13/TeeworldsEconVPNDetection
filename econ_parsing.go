@@ -55,7 +55,8 @@ func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr string
 
 	econ, err := econ.DialTo(addr, pw)
 	if err != nil {
-		log.Printf("Could not connect to %s, error: %s\n", addr, err.Error())
+		checker.Close()
+		log.Fatalf("Could not connect to %s, error: %s\n", addr, err.Error())
 		return
 	}
 	defer econ.Close()
