@@ -57,17 +57,18 @@ ECON_PASSWORDS=abcdef0123456789
 
 # each connection retries incrementally to reconnect to the server.
 # if the connection timeout is reached, the routine stops.
-RECONNECT_TIMEOUT_MINS=5
+RECONNECT_TIMEOUT=24h
 
 # retries to reconnect a lost connection after x seconds
-RECONNECT_DELAY_SECONDS=10
+RECONNECT_DELAY=10s
 
 # redis database credentials, these are the default values after installation
 REDIS_ADDRESS=localhost:6379
 REDIS_PASSWORD=
 
 # how many minutes the VPN IP is banned and with what reason.
-VPN_BANTIME=1440
+# 24h10m, smallest unit are minutes. any fraction of a minute is cut off.
+VPN_BANTIME=24h
 VPN_BANREASON=VPN - discord.gg/123456
 
 # specific delayed banning that waits for a specific joining state, where all player information is 
