@@ -66,7 +66,7 @@ func (c *Config) Options() configo.Options {
 			Key:             "REDIS_DB_VPN",
 			Mandatory:       true,
 			Description:     "database to use in your redis instance [0,15](default: 0)",
-			DefaultValue:    "1",
+			DefaultValue:    "0",
 			ParseFunction:   parsers.RangesInt(&c.RedisDB, 0, 15),
 			UnparseFunction: unparsers.Int(&c.RedisDB),
 		},
