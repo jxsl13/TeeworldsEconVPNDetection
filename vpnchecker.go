@@ -5,15 +5,34 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/jxsl13/goripr"
 )
+
+// Valid is used to represent the answer of an api endpoint
+type Valid struct {
+	IsValid bool
+	Value   bool
+}
+
+// VPNChecker encapsulates the redis database as cache and the
+// implemented api endpoints in order to determine, whether an ip is a vpn based on
+// either the caching information or based on the implemented api endpoints, whether
+// an ip is a vpn.
+type VPNChecker struct {
+	r       *goripr.Client
+	Apis    []VPN
+	Offline bool
+}
+
+func (rdb *VPNChecker) Close() error {
+	return rdb.r.Close()
+}
 
 // NewVPNChecker creates a new checker that can be asked for VPN IPs.
 // it connects to the redis database for caching and requests information from all existing
 // API endpoints that provode free VPN detections.
-func NewVPNChecker(cfg *Config) *VPNChecker {
+func NewVPNChecker(cfg *Config) (*VPNChecker, error) {
 
 	apis := []VPN{}
 	if !cfg.Offline {
@@ -27,49 +46,33 @@ func NewVPNChecker(cfg *Config) *VPNChecker {
 		apis = append(apis, NewIPTeohIO(httpClient))
 	}
 
-	return &VPNChecker{
-		redis.NewClient(
-			&redis.Options{
-				Addr:     cfg.RedisAddress,
-				Password: cfg.RedisPassword,
-				DB:       config.RedisDB,
-			}),
-		apis,
-		cfg.Offline,
+	ripr, err := goripr.NewClient(goripr.Options{
+		Addr:     cfg.RedisAddress,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
+	})
+	if err != nil {
+		return nil, err
 	}
-}
 
-// Valid is used to represent the answer of an api endpoint
-type Valid struct {
-	IsValid bool
-	Value   bool
-}
-
-// VPNChecker encapsulates the redis database as cache and the
-// implemented api endpoints in order to determine, whether an ip is a vpn based on
-// either the caching information or based on the implemented api endpoints, whether
-// an ip is a vpn.
-type VPNChecker struct {
-	*redis.Client
-	Apis    []VPN
-	Offline bool
+	return &VPNChecker{
+		r:       ripr,
+		Apis:    apis,
+		Offline: cfg.Offline,
+	}, nil
 }
 
 //
-func (rdb *VPNChecker) foundInCache(sIP string) (found, isVPN bool, reason string) {
+func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason string, err error) {
 
-	sIsVPN, err := rdb.Get(sIP).Result()
-	if err != nil {
-		return false, false, ""
+	reason, err = rdb.r.Find(sIP)
+	if errors.Is(goripr.ErrIPNotFound, err) {
+		return false, false, reason, nil
+	} else if err != nil {
+		return false, false, "", err
 	}
 
-	if sIsVPN == "0" {
-		// not vpn or banned
-		return true, false, ""
-	}
-
-	// either "1" or "text ban reason"
-	return true, true, sIsVPN
+	return true, true, reason, nil
 }
 
 func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
@@ -119,14 +122,21 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 		return false, "", errors.New("Invalid IP passed, expexted IPv4")
 	}
 
-	found, isCacheVPN, reason := rdb.foundInCache(IP)
-
-	if found {
-		log.Printf("[in cache]: %s\n", IP)
-		return isCacheVPN, reason, nil
+	found, isVPN, reason, err := rdb.foundInCache(IP)
+	if err != nil {
+		return false, "", err
 	}
 
+	if found {
+		log.Println("[in cache]: ", IP)
+		return isVPN, reason, nil
+	} else {
+		log.Println("[not in cache]: ", IP)
+	}
+
+	// not found, lookup online
 	if rdb.Offline {
+		log.Println("[skipping online check]: ", IP)
 		// if the detection is offline, cache only,
 		// caching of default no values makes no sense, so no caching here.
 		return false, "", nil
@@ -137,11 +147,11 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 	// update cache values
 	if isOnlineVPN {
 		// forever vpn
-		rdb.Set(IP, true, 0)
-	} else {
-		// for one week no vpn
-		rdb.Set(IP, false, 24*7*time.Hour)
+		e := rdb.r.Insert(IP, "VPN (f/o)")
+		if e != nil {
+			log.Println("[error]: failed to insert VPN IP found online: ", IP)
+		}
 	}
-
-	return isOnlineVPN, "1", nil // reason 1 -> VPN
+	// else case, not found online
+	return isOnlineVPN, "", nil // reason 1 -> VPN
 }

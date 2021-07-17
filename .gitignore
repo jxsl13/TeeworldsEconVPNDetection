@@ -2,3 +2,4 @@
 TeeworldsEconVPNDetectionGo 
 *.txt
 .vscode/settings.json
+.DS_Store

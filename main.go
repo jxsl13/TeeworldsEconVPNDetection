@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -10,10 +9,6 @@ import (
 	"os/signal"
 	"regexp"
 	"syscall"
-	"time"
-
-	"github.com/go-redis/redis"
-	"github.com/jxsl13/twapi/econ"
 )
 
 var (
@@ -35,195 +30,12 @@ func init() {
 	}
 }
 
-func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
-	var matches []string
-
-	switch config.ZCatchLogFormat {
-	case true:
-		matches = playerzCatchJoinRegex.FindStringSubmatch(line)
-	default:
-		matches = playerVanillaJoinRegex.FindStringSubmatch(line)
-	}
-
-	if len(matches) <= 0 {
-		return
-	}
-
-	IP := matches[2]
-
-	isVPN, reason, err := checker.IsVPN(IP)
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
-
-	// vpn is saved as 1, banserver bans as text
-	if isVPN {
-		tag := "[banserver]:" // manually added with custom reason
-		ID := matches[1]
-		minutes := int(config.VPNBanTime.Minutes())
-
-		if reason == "1" {
-			tag = "[is a vpn] :" //
-			reason = config.VPNBanReason
-		}
-
-		econ.WriteLine(fmt.Sprintf("ban %s %d %s", ID, minutes, reason))
-		log.Println(tag, IP, "(", reason, ")")
-		return
-	}
-
-	log.Println("[clean IP]:", IP)
-
-}
-
-func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr string, pw string) {
-
-	econ, err := econ.DialTo(addr, pw)
-	if err != nil {
-		log.Printf("Could not connect to %s, error: %s\n", addr, err.Error())
-		return
-	}
-	defer econ.Close()
-
-	accumulatedRetryTime := time.Duration(0)
-	retries := 0
-
-	for {
-		if retries == 0 {
-			log.Println("Connected to server:", addr)
-		} else {
-			log.Println("Retrying to connect to server:", addr)
-		}
-
-	parseLine:
-		for {
-			select {
-			case <-ctx.Done():
-				log.Printf("Closing connection to: %s\n", addr)
-				return
-			default:
-				line, err := econ.ReadLine()
-				if err != nil {
-					log.Printf("Lost connection to %s, error: %s\n", addr, err.Error())
-					break parseLine
-				}
-				go parseLine(econ, checker, line)
-			}
-
-		}
-
-		select {
-		case <-ctx.Done():
-			log.Printf("Closing connection to: %s\n", addr)
-			return
-		case <-time.After(config.ReconnectDelay):
-			accumulatedRetryTime += config.ReconnectDelay
-
-			// if we exceed a threshold, stop the goroutine
-			if accumulatedRetryTime > config.ReconnectTimeout {
-				log.Println("Exceeded reconnect timeout, stopping routine:", addr)
-				return
-			}
-			retries++
-		}
-	}
-}
-
-func parseFileAndAddIPsToCache(filename string) (int, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return 0, err
-	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddress,
-		Password: config.RedisPassword,
-		DB:       config.RedisDB,
-	})
-	defer r.Close()
-
-	foundIPs := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-
-		ips := parseIPLine(scanner.Text(), "1")
-		foundIPs += len(ips)
-
-		transaction := r.TxPipeline()
-		for ip, reason := range ips {
-			// default reason = "1"
-			// custom reason = "text"
-			transaction.Set(ip, reason, 0) // Add IP to cache.
-		}
-		transaction.Exec()
-	}
-	return foundIPs, nil
-}
-
-func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return 0, err
-	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddress,
-		Password: config.RedisPassword,
-		DB:       config.RedisDB,
-	})
-	defer r.Close()
-
-	foundIPs := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-
-		ips := parseIPLine(scanner.Text(), "")
-		foundIPs += len(ips)
-
-		transaction := r.TxPipeline()
-		for ip := range ips {
-			transaction.Del(ip)
-		}
-		transaction.Exec()
-	}
-	return foundIPs, nil
-}
-
-func parseFileAndWhiteListInCache(filename string) (int, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return 0, err
-	}
-	r := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddress,
-		Password: config.RedisPassword,
-		DB:       config.RedisDB,
-	})
-	defer r.Close()
-
-	foundIPs := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-
-		ips := parseIPLine(scanner.Text(), "0")
-		foundIPs += len(ips)
-
-		transaction := r.TxPipeline()
-		for ip := range ips {
-			transaction.Set(ip, "0", 0) // Force whitelisting in cache
-		}
-		transaction.Exec()
-	}
-	return foundIPs, nil
-}
-
 func main() {
 
 	addFile := ""
 	removeFile := ""
-	whitelistFile := ""
 	flag.StringVar(&addFile, "add", "", "pass a text file with IPs and IP subnets to be added to the database")
 	flag.StringVar(&removeFile, "remove", "", "pass a text file with IPs and IP subnets to be removed from the database")
-	flag.StringVar(&whitelistFile, "whitelist", "", "whitelist these IPs forever in cache, meaning they will never be banned.")
 	flag.BoolVar(&config.Offline, "offline", false, "do not use the api endpoints, only rely on the cache")
 	flag.Parse()
 
@@ -233,7 +45,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Added %d VPN IPs to the redis(DB: %d) cache.\n", foundIPs, config.RedisDB)
+		fmt.Printf("Added %d VPN IP ranges to the redis(DB: %d).\n", foundIPs, config.RedisDB)
 		return
 	}
 
@@ -242,16 +54,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("Removed %d IPs from the redis(DB: %d) cache.\n", foundIPs, config.RedisDB)
-		return
-	}
-
-	if whitelistFile != "" {
-		foundIPs, err := parseFileAndWhiteListInCache(whitelistFile)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Printf("Whitelisted %d IPs in the redis(DB: %d) cache.\n", foundIPs, config.RedisDB)
+		fmt.Printf("Removed %d IP ranges from the redis(DB: %d).\n", foundIPs, config.RedisDB)
 		return
 	}
 
@@ -260,7 +63,11 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	checker := NewVPNChecker(config)
+	checker, err := NewVPNChecker(config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer checker.Close()
 
 	// start goroutines
 	for idx, addr := range config.EconServers {
