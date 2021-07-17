@@ -79,7 +79,7 @@ func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
 
 func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr string, pw string) {
 
-	econ, err := econ.DialTo(string(addr), string(pw))
+	econ, err := econ.DialTo(addr, pw)
 	if err != nil {
 		log.Printf("Could not connect to %s, error: %s\n", addr, err.Error())
 		return
@@ -136,8 +136,8 @@ func parseFileAndAddIPsToCache(filename string) (int, error) {
 		return 0, err
 	}
 	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
+		Addr:     config.RedisAddress,
+		Password: config.RedisPassword,
 		DB:       config.RedisDB,
 	})
 	defer r.Close()
@@ -166,8 +166,8 @@ func parseFileAndRemoveIPsFromCache(filename string) (int, error) {
 		return 0, err
 	}
 	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
+		Addr:     config.RedisAddress,
+		Password: config.RedisPassword,
 		DB:       config.RedisDB,
 	})
 	defer r.Close()
@@ -194,8 +194,8 @@ func parseFileAndWhiteListInCache(filename string) (int, error) {
 		return 0, err
 	}
 	r := redis.NewClient(&redis.Options{
-		Addr:     string(config.RedisAddress),
-		Password: string(config.RedisPassword),
+		Addr:     config.RedisAddress,
+		Password: config.RedisPassword,
 		DB:       config.RedisDB,
 	})
 	defer r.Close()
