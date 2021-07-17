@@ -13,12 +13,11 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/joho/godotenv"
 	"github.com/jxsl13/twapi/econ"
 )
 
 var (
-	config = Config{}
+	config *Config
 
 	// 0: full 1: ID 2: IP
 	playerVanillaJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
@@ -28,16 +27,8 @@ var (
 )
 
 func init() {
-
-	var env map[string]string
-	env, err := godotenv.Read(".env")
-
-	if err != nil {
-		log.Println("Error parsing '.env' file:", err.Error())
-		return
-	}
-
-	config, err = NewConfig(env)
+	var err error
+	config, err = NewConfig(".env")
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -47,7 +38,7 @@ func init() {
 func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
 	var matches []string
 
-	switch config.zCatchLogFormat {
+	switch config.ZCatchLogFormat {
 	case true:
 		matches = playerzCatchJoinRegex.FindStringSubmatch(line)
 	default:
@@ -86,7 +77,7 @@ func parseLine(econ *econ.Conn, checker *VPNChecker, line string) {
 
 }
 
-func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr address, pw password) {
+func econEvaluationRoutine(ctx context.Context, checker *VPNChecker, addr string, pw string) {
 
 	econ, err := econ.DialTo(string(addr), string(pw))
 	if err != nil {
@@ -269,7 +260,7 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	checker := NewVPNChecker(&config)
+	checker := NewVPNChecker(config)
 
 	// start goroutines
 	for idx, addr := range config.EconServers {

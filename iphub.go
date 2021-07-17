@@ -3,21 +3,20 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
-	"fmt"
 	"time"
 )
 
-
 // NewIPHub reates a new api that can be checked for VPN IPs
-func NewIPHub(c *http.Client, apikey token) *IPHub  {
+func NewIPHub(c *http.Client, apikey string) *IPHub {
 	return &IPHub{
-		Client: c,
-		Limiter: NewRateLimiter(24 * time.Hour, 1000),
-		APIKey: string(apikey),
+		Client:  c,
+		Limiter: NewRateLimiter(24*time.Hour, 1000),
+		APIKey:  apikey,
 	}
 }
 
