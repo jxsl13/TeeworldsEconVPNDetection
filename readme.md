@@ -136,7 +136,7 @@ In order for such a file to be parsed, you can pass it on startup to the applica
 ```
 
 You can use the `ip-v4.txt` from [VPNs](https://github.com/ejrv/VPNs).
-It can take up to a few hours for all of those ~100 million IPs to be added to your redis database.
+Due to the underlying *goripr* library the insertion of those IP ranges is pretty fast and storage efficient.
 
 After all of the IPs have been parsed and added to the cache, the application shuts down.
 You need to restart it without the flag in order to have the econ VPN detection behavior.

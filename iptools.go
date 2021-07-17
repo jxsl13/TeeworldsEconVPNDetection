@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	splitRegex = regexp.MustCompile(`^\s*([0-9\.\-\/]+)\s*(#\s*(.*[^\s])\s*)?$`)
+	splitRegex = regexp.MustCompile(`^\s*([\s0-9\.\-\/]+)\s*(#\s*(.*[^\s])\s*)?$`)
 )
 
 func parseIPLine(line string) (ipRange, reason string, err error) {
@@ -15,5 +15,15 @@ func parseIPLine(line string) (ipRange, reason string, err error) {
 	if len(matches) == 0 {
 		return "", "", errors.New("empty")
 	}
-	return strings.TrimSpace(matches[1]), strings.TrimSpace(matches[3]), nil
+
+	ipRange = strings.TrimSpace(matches[1])
+	reason = strings.TrimSpace(matches[3])
+
+	ips := strings.Split(ipRange, "-")
+	for idx, ip := range ips {
+		ips[idx] = strings.TrimSpace(ip)
+	}
+	ipRange = strings.Join(ips, "-")
+
+	return ipRange, reason, nil
 }
