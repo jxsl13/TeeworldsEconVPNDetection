@@ -67,7 +67,7 @@ func (c *Config) Options() configo.Options {
 			Mandatory:       true,
 			Description:     "database to use in your redis instance [0,15](default: 0)",
 			DefaultValue:    "1",
-			ParseFunction:   parsers.ChoiceInt(&c.RedisDB, 0, 15),
+			ParseFunction:   parsers.RangesInt(&c.RedisDB, 0, 15),
 			UnparseFunction: unparsers.Int(&c.RedisDB),
 		},
 		{
