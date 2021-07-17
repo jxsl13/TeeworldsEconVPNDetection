@@ -15,7 +15,6 @@ type token string    // long weird string
 type password string // password string
 
 var (
-	errIPHubTokenMissing       = errors.New("The IPHub api access key is missing, IPHUB_TOKEN")
 	errRedisDatabaseNotFound   = errors.New("Could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is running")
 	errEconAddressesMissing    = errors.New("Please provide some econ addresses in your .env configuration: 'ECON_LIST=127.0.0.1:1234 127.0.0.1:5678'")
 	errAddressPasswordMismatch = errors.New("The number of ECON_PASSWORD doesn't match the number of ECON_ADDRESSES, either provide one password for all addresses or one password per address")
@@ -46,6 +45,9 @@ func NewConfig(env map[string]string) (Config, error) {
 	// retrieved from .env file
 	IPHubToken := env["IPHUB_TOKEN"]
 
+	if IPHubToken == "" {
+		log.Println("IPHub vpn checking is disabled, as no IPHUB_TOKEN has been provided.")
+	}
 	// empty token disables the checking
 	cfg.IPHubToken = token(IPHubToken)
 
