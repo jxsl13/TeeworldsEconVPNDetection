@@ -46,9 +46,7 @@ func NewConfig(env map[string]string) (Config, error) {
 	// retrieved from .env file
 	IPHubToken := env["IPHUB_TOKEN"]
 
-	if IPHubToken == "" {
-		return cfg, errIPHubTokenMissing
-	}
+	// empty token disables the checking
 	cfg.IPHubToken = token(IPHubToken)
 
 	RedisAddress := env["REDIS_ADDRESS"]

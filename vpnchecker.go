@@ -19,10 +19,12 @@ func NewVPNChecker(cfg *Config) *VPNChecker {
 	if !cfg.Offline {
 		// share client with all apis
 		httpClient := &http.Client{}
-		apis = []VPN{
-			NewIPHub(httpClient, cfg.IPHubToken),
-			NewIPTeohIO(httpClient),
+
+		if cfg.IPHubToken != "" {
+			apis = append(apis, NewIPHub(httpClient, cfg.IPHubToken))
 		}
+
+		apis = append(apis, NewIPTeohIO(httpClient))
 	}
 
 	return &VPNChecker{
