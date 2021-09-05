@@ -279,9 +279,9 @@ func (c *Config) Options() configo.Options {
 			Key: "Initialize Goripr",
 			PreParseAction: func() error {
 				ripr, err := goripr.NewClient(goripr.Options{
-					Addr:     cfg.RedisAddress,
-					Password: cfg.RedisPassword,
-					DB:       cfg.RedisDB,
+					Addr:     c.RedisAddress,
+					Password: c.RedisPassword,
+					DB:       c.RedisDB,
 				})
 				if err != nil {
 					return err
@@ -329,7 +329,7 @@ func (c *Config) Options() configo.Options {
 // apis returns a list of available apis that is constructed based on the configuration
 func (c *Config) apis() []vpn.VPN {
 	apis := []vpn.VPN{}
-	if !cfg.Offline {
+	if !c.Offline {
 		// share client with all apis
 		httpClient := &http.Client{}
 

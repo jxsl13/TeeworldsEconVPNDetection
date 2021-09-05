@@ -52,6 +52,7 @@ func Update() error {
 	for _, addr := range addresses {
 		knownIPs[addr.IP.String()] = true
 	}
+	log.Printf("known potential proxy IPs: %d\n", len(knownIPs))
 	return nil
 }
 
