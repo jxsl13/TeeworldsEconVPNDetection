@@ -9,6 +9,14 @@ Does the cache not contain the IP, currently three VPN detection APIs are used t
 
 ## Requirements
 
+### Docker
+
+```
+make start
+
+makes stop
+```
+
 ### Redis server for caching of IPs
 
 This application requires a running redis database that can be used as cache for IPs.
@@ -41,19 +49,72 @@ Especially the econ addresses and password of the servers that this application 
 
 ### Example .env
 
-This file needs to live within the same directory as your executable.
+This file needs to live within the *same directory* as your *executable* or in case of docker, your .env file must be within the *same directory* as the `docker-compose.yaml` file
 
 ```env
 # .env
 
-# the api key can be found here: https://iphub.info/account (requires registration)
-IPHUB_TOKEN=abcdefghijklmnopqrst0123456789
+# mandatory
 
 # econ addresses separated by one space
 ECON_ADDRESSES=127.0.0.1:9303 127.0.0.1:9304 127.0.0.1:9305
 
-# passwords, either one for all or one per address
-ECON_PASSWORDS=abcdef0123456789
+# passwords, either one for all or one per address, separated by a single space
+ECON_PASSWORDS=password
+
+
+# in case you are not running this application in a docker environment, you should provide a 
+# redis database address, if you use the docker-compose.yaml or the Makefile, this 
+# parameter can be skipped
+REDIS_ADDRESS=localhost:6379
+
+# some redis password to protect your database
+REDIS_PASSWORD=some_database_password
+
+# optional
+
+# whether you try to monitor a zCatch 0.7.x server or any vanilla based 0.7.x Teeworlds server.
+# if your server has the vanilla logging format, leave this as false
+ZCATCH_LOGGING=false
+
+# set this to true in order to only rely on data the can be found in the redis database
+# all of the following VPN detection APIs will not be used in this state.
+OFFLINE=false
+
+# the api key can be found here: https://iphub.info/account (requires registration)
+# leave empty if you don't want to use this
+IPHUB_TOKEN=""
+
+# the api key can be found here: https://proxycheck.io (requires registration)
+PROXYCHECK_TOKEN=""
+
+# whether to use the https://ip.teoh.io api for checking joining IP addresses
+IPTEOH_ENABLED="false"
+
+# how many (in %) of the above APIs must detect an IP as VPN in order for the IP to be permanently added to the database
+PERMABAN_THRESHOLD="0.6"
+
+
+# how many minutes the VPN IP is banned and with what reason.
+# 24h10m, smallest unit are minutes. any fraction of a minute is cut off.
+VPN_BAN_DURATION="30m"
+VPN_BAN_REASON="VPN"
+
+# whether to periodically fetch the full server list and ban any player that 
+# joins with an IP that is equal to any of the registered Teeworlds servers.
+# This feature prevents players from joining through a proxy Teeworlds server that might log all
+# of that player's activities, especially passwords.
+PROXY_DETECTION_ENABLED="false"
+
+# how long to wait in between IP list updates
+PROXY_UPDATE_INTERVAL="1m"
+
+# same as VPN_BAN_DURATION & VPN_BAN_REASON, just for players joining from a different teeworlds server.
+PROXY_BAN_DURATION="24h"
+PROXY_BAN_REASON="proxy connection"
+
+
+# should not be touched
 
 # each connection retries incrementally to reconnect to the server.
 # if the connection timeout is reached, the routine stops.
@@ -61,22 +122,6 @@ RECONNECT_TIMEOUT=24h
 
 # retries to reconnect a lost connection after x seconds
 RECONNECT_DELAY=10s
-
-# redis database credentials, these are the default values after installation
-REDIS_ADDRESS=localhost:6379
-REDIS_PASSWORD=
-
-# how many minutes the VPN IP is banned and with what reason.
-# 24h10m, smallest unit are minutes. any fraction of a minute is cut off.
-VPN_BANTIME=24h
-VPN_BANREASON=VPN - discord.gg/123456
-
-# specific delayed banning that waits for a specific joining state, where all player information is 
-# already known to the zCatch server (enables zCatch specific log parsing: "1", "true", "enable", "enabled", "on")
-# any other value disables this parsing variant.
-ZCATCH_LOGGING=0
-
-
 ```
 
 ## Downloading dependencies
