@@ -289,10 +289,6 @@ func (c *Config) Options() configo.Options {
 				c.ripr = ripr
 				return nil
 			},
-			PreUnparseAction: func() error {
-				// called on unparsing
-				return c.ripr.Close()
-			},
 		},
 		{
 			Key: "Initialize Online VPN Checker",
