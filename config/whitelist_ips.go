@@ -2,7 +2,6 @@ package config
 
 import (
 	"bufio"
-	"log"
 	"os"
 
 	"github.com/jxsl13/goripr"
@@ -29,7 +28,6 @@ func parseFileAndRemoveIPsFromCache(filename, redisAddress, redisPassword string
 		line := scanner.Text()
 		ip, _, err := parseIPLine(line)
 		if err != nil {
-			log.Println("Skipped line: ", line)
 			continue
 		}
 		err = r.Remove(ip)

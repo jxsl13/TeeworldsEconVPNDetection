@@ -14,7 +14,6 @@ import (
 	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
 	"github.com/jxsl13/goripr"
 	configo "github.com/jxsl13/simple-configo"
-	"github.com/jxsl13/simple-configo/actions"
 	"github.com/jxsl13/simple-configo/parsers"
 	"github.com/jxsl13/simple-configo/unparsers"
 )
@@ -46,7 +45,7 @@ func newFromFile(dotEnvFilePath string) *Config {
 
 	once.Do(func() {
 		c := &Config{}
-		err := configo.ParseEnvFile(dotEnvFilePath, c)
+		err := configo.ParseEnvFileOrEnv(dotEnvFilePath, c)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -205,7 +204,7 @@ func (c *Config) Options() configo.Options {
 			ParseFunction: parsers.String(&c.VPNBanReason),
 		},
 		{
-			Key:           "VPN_BAN_TIME",
+			Key:           "VPN_BAN_DURATION",
 			DefaultValue:  "5m",
 			Description:   "for how long a vpn client is banned.",
 			ParseFunction: parsers.Duration(&c.VPNBanTime),
@@ -258,8 +257,12 @@ func (c *Config) Options() configo.Options {
 				flag.Parse()
 
 				if addFile != "" {
+					log.Printf("blacklist location: %s\n", addFile)
 					c.AddFile = &addFile
-				} else if removeFile != "" {
+				}
+
+				if removeFile != "" {
+					log.Printf("whitelist location: %s\n", removeFile)
 					c.RemoveFile = &removeFile
 				}
 
@@ -273,18 +276,27 @@ func (c *Config) Options() configo.Options {
 		},
 		{
 			Key: "Add IPs to Redis Cache & Remove IPs from Redis Cache",
-			PreParseAction: actions.OnlyIf(c.AddFile != nil, func() error {
-				_, err := parseFileAndAddIPsToCache(*c.AddFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
+			PreParseAction: func() error {
+				if c.AddFile == nil {
+					return nil
+				}
+				i, err := parseFileAndAddIPsToCache(*c.AddFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
+				log.Printf("added %d ips or ip range to redis database: %s\n", i, *c.AddFile)
 				return err
-			}),
-			PostParseAction: actions.OnlyIf(c.RemoveFile != nil, func() error {
-				_, err := parseFileAndRemoveIPsFromCache(*c.RemoveFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
+			},
+			PostParseAction: func() error {
+				if c.RemoveFile == nil {
+					return nil
+				}
+				i, err := parseFileAndRemoveIPsFromCache(*c.RemoveFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
+				log.Printf("removed %d ips or ip range from redis database: %s\n", i, *c.RemoveFile)
 				return err
-			}),
+			},
 		},
 		{
 			Key: "Initialize Goripr",
 			PreParseAction: func() error {
+				log.Println("initializing goripr...")
 				ripr, err := goripr.NewClient(goripr.Options{
 					Addr:     c.RedisAddress,
 					Password: c.RedisPassword,
@@ -301,10 +313,12 @@ func (c *Config) Options() configo.Options {
 			Key: "Initialize Online VPN Checker",
 			PreParseAction: func() error {
 				c.checker = newVPNChecker(c)
+				log.Println("initialized vpn checker...")
 				return nil
 			},
 			PreUnparseAction: func() error {
 				// called on unparsing
+				log.Println("closing vpn checker...")
 				return c.checker.Close()
 			},
 		},
@@ -317,10 +331,12 @@ func (c *Config) Options() configo.Options {
 		{
 			Key: "Initialize Context",
 			PreParseAction: func() error {
+				log.Println("initializing context...")
 				c.ctx, c.cancel = context.WithCancel(context.Background())
 				return nil
 			},
 			PreUnparseAction: func() error {
+				log.Println("closing context...")
 				// called on close
 				c.cancel()
 				return nil
