@@ -12,9 +12,14 @@ import (
 var (
 	knownIPs = make(map[string]bool, 1024)
 	mu       sync.Mutex
+	cfg      = config.New()
 )
 
 func init() {
+	if !cfg.ProxyDetectionEnabled {
+		log.Println("skipping proxy detection initialization, disabled...")
+		return
+	}
 	if config.New().ProxyUpdateInterval < time.Minute {
 		log.Println("disabled registered Teeworlds proxy IPs check, increase the update interval to above 1m in order to enable.")
 		return
@@ -43,21 +48,42 @@ func init() {
 
 // Update updates the teeworlds server list and fetches all of those IPs
 func Update() error {
+	// fetch udp server list
 	addresses, err := browser.GetServerAddresses()
 	if err != nil {
 		return err
 	}
+
+	// add master server IPs
+	mu.Lock()
+	for _, addr := range addresses {
+		ip := addr.IP.String()
+		knownIPs[ip] = true
+	}
+	mu.Unlock()
+
+	// fetch http server list
+	ips, err := GetHttpServerIPs()
+	if err != nil {
+		return err
+	}
+
+	// add http master server IPs
 	mu.Lock()
 	defer mu.Unlock()
-	for _, addr := range addresses {
-		knownIPs[addr.IP.String()] = true
+	for _, ip := range ips {
+		knownIPs[ip] = true
 	}
+
 	log.Printf("known potential proxy IPs: %d\n", len(knownIPs))
 	return nil
 }
 
 // IsTeeworldsServer checks whether a joining IP resembles that of a known registered Teeworlds server.
 func IsTeeworldsServer(ip string) bool {
+	if !cfg.ProxyDetectionEnabled {
+		return false
+	}
 	mu.Lock()
 	defer mu.Unlock()
 	return knownIPs[ip]

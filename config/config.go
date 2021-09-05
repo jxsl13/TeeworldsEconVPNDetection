@@ -74,9 +74,10 @@ type Config struct {
 	Offline          bool
 	ZCatchLogFormat  bool // parsing of zCatch econ logs (Vanilla log format -> false)
 
-	ProxyUpdateInterval time.Duration
-	ProxyBanDuration    time.Duration
-	ProxyBanReason      string
+	ProxyDetectionEnabled bool
+	ProxyUpdateInterval   time.Duration
+	ProxyBanDuration      time.Duration
+	ProxyBanReason        string
 
 	AddFile    *string // add ip list to cache
 	RemoveFile *string // remove ip list from cache (executed after adding)
@@ -214,6 +215,12 @@ func (c *Config) Options() configo.Options {
 			DefaultValue:  "false",
 			Description:   "whether to use the zCatch log format parser or the vanilla parser",
 			ParseFunction: parsers.Bool(&c.ZCatchLogFormat),
+		},
+		{
+			Key:           "PROXY_DETECTION_ENABLED",
+			DefaultValue:  "false",
+			Description:   "whether to periodically fetch the list of teeworlds servers and add those server IPs to an internal ban list",
+			ParseFunction: parsers.Bool(&c.ProxyDetectionEnabled),
 		},
 		{
 			Key:           "PROXY_UPDATE_INTERVAL",
