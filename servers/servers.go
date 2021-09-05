@@ -20,8 +20,8 @@ func init() {
 		log.Println("skipping proxy detection initialization, disabled...")
 		return
 	}
-	if config.New().ProxyUpdateInterval < time.Minute {
-		log.Println("disabled registered Teeworlds proxy IPs check, increase the update interval to above 1m in order to enable.")
+	if config.New().ProxyUpdateInterval < 10*time.Second {
+		log.Println("disabled registered Teeworlds proxy IPs check, increase the update interval to above 10s in order to enable.")
 		return
 	}
 	err := Update()

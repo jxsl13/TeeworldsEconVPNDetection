@@ -224,7 +224,7 @@ func (c *Config) Options() configo.Options {
 		},
 		{
 			Key:           "PROXY_UPDATE_INTERVAL",
-			DefaultValue:  "5m",
+			DefaultValue:  "1m",
 			Description:   "how long to wait before updating the IP list of registered Teeworlds servers that might act as proxies",
 			ParseFunction: parsers.Duration(&c.ProxyUpdateInterval),
 		},
