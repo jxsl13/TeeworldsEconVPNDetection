@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"bufio"
@@ -8,16 +8,16 @@ import (
 	"github.com/jxsl13/goripr"
 )
 
-func parseFileAndAddIPsToCache(filename string) (int, error) {
+func parseFileAndAddIPsToCache(filename, redisAddress, redisPassword string, redisDB int) (int, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return 0, err
 	}
 
 	r, err := goripr.NewClient(goripr.Options{
-		Addr:     config.RedisAddress,
-		Password: config.RedisPassword,
-		DB:       config.RedisDB,
+		Addr:     redisAddress,
+		Password: redisPassword,
+		DB:       redisDB,
 	})
 	if err != nil {
 		return 0, err

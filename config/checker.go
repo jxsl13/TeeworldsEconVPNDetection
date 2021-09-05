@@ -1,11 +1,11 @@
-package main
+package config
 
 import (
 	"errors"
 	"log"
 	"net"
-	"net/http"
 
+	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
 	"github.com/jxsl13/goripr"
 )
 
@@ -20,46 +20,26 @@ type Valid struct {
 // either the caching information or based on the implemented api endpoints, whether
 // an ip is a vpn.
 type VPNChecker struct {
-	r       *goripr.Client
-	Apis    []VPN
-	Offline bool
+	r         *goripr.Client
+	Apis      []vpn.VPN
+	Offline   bool
+	Threshold float64
 }
 
 func (rdb *VPNChecker) Close() error {
 	return rdb.r.Close()
 }
 
-// NewVPNChecker creates a new checker that can be asked for VPN IPs.
+// newVPNChecker creates a new checker that can be asked for VPN IPs.
 // it connects to the redis database for caching and requests information from all existing
 // API endpoints that provode free VPN detections.
-func NewVPNChecker(cfg *Config) (*VPNChecker, error) {
-
-	apis := []VPN{}
-	if !cfg.Offline {
-		// share client with all apis
-		httpClient := &http.Client{}
-
-		if cfg.IPHubToken != "" {
-			apis = append(apis, NewIPHub(httpClient, cfg.IPHubToken))
-		}
-
-		apis = append(apis, NewIPTeohIO(httpClient))
-	}
-
-	ripr, err := goripr.NewClient(goripr.Options{
-		Addr:     cfg.RedisAddress,
-		Password: cfg.RedisPassword,
-		DB:       cfg.RedisDB,
-	})
-	if err != nil {
-		return nil, err
-	}
-
+func newVPNChecker(cfg *Config) *VPNChecker {
 	return &VPNChecker{
-		r:       ripr,
-		Apis:    apis,
-		Offline: cfg.Offline,
-	}, nil
+		r:         cfg.ripr,
+		Apis:      cfg.apis(),
+		Offline:   cfg.Offline,
+		Threshold: cfg.PermaBanThreshold,
+	}
 }
 
 //
@@ -110,7 +90,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	}
 	percentage := trueValue / total
 
-	IsVPN = percentage >= 0.75
+	IsVPN = percentage >= float64(rdb.Threshold)
 	return
 }
 
