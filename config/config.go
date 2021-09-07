@@ -277,14 +277,8 @@ func (c *Config) Options() configo.Options {
 		},
 		{
 			Key: "Add IPs to Redis Cache & Remove IPs from Redis Cache",
-			PreParseAction: actions.OnlyIfAction(
-				func() error {
-					// condition
-					if c.AddFile == nil {
-						return errors.New("skip adding file")
-					}
-					return nil
-				},
+			PreParseAction: actions.OnlyIfNotNil(
+				c.AddFile,
 				func() error {
 					i, err := parseFileAndAddIPsToCache(*c.AddFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
 					if err != nil {
@@ -293,14 +287,8 @@ func (c *Config) Options() configo.Options {
 					log.Printf("added %d ips or ip range to redis database: %s\n", i, *c.AddFile)
 					return nil
 				}),
-			PostParseAction: actions.OnlyIfAction(
-				func() error {
-					// condition
-					if c.RemoveFile == nil {
-						return errors.New("skipping removing file")
-					}
-					return nil
-				},
+			PostParseAction: actions.OnlyIfNotNil(
+				c.RemoveFile,
 				func() error {
 					i, err := parseFileAndRemoveIPsFromCache(*c.RemoveFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
 					if err != nil {
