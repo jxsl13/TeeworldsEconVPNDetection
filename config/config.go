@@ -62,6 +62,8 @@ type Config struct {
 	ProxyCheckToken string
 	IpTeohEnabled   bool
 
+	HttpMasterServerUrl string // url to the .json file of the ddnet http master server
+
 	RedisAddress     string
 	RedisPassword    string
 	RedisDB          int
@@ -116,6 +118,11 @@ func (c *Config) Options() configo.Options {
 			Description:   "Wether to use the https://ip.teoh.io api",
 			DefaultValue:  "false",
 			ParseFunction: parsers.Bool(&c.IpTeohEnabled),
+		},
+		{
+			Key:           "HTTP_MASTERSERVER_JSON_URL",
+			DefaultValue:  "https://master1.ddnet.tw/ddnet/15/servers.json",
+			ParseFunction: parsers.String(&c.HttpMasterServerUrl),
 		},
 		{
 			Key:           "REDIS_ADDRESS",

@@ -6,17 +6,18 @@ import (
 	"regexp"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/config"
 )
 
 var (
-	HttpMasterUrl = "https://master1.ddnet.tw/ddnet/15/servers.json"
+	httpMasterUrl = config.New().HttpMasterServerUrl
 	client        = (*resty.Client)(nil)
 	path          = ""
 )
 
 func init() {
 	hostSplitRegex := regexp.MustCompile(`^(https?://[^/]+)(/.*)$`)
-	matches := hostSplitRegex.FindStringSubmatch(HttpMasterUrl)
+	matches := hostSplitRegex.FindStringSubmatch(httpMasterUrl)
 	if len(matches) != 3 {
 		log.Fatalln("HttpMasterUrl is invalid")
 	}
