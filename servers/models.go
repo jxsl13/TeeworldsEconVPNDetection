@@ -39,7 +39,7 @@ func (s *Servers) GetIPs() []string {
 		if len(parts) != 2 {
 			continue
 		}
-		m[parts[1]] = true
+		m[parts[0]] = true
 	}
 
 	result := make([]string, 0, len(m))
