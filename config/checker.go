@@ -99,7 +99,7 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 
 	IP := net.ParseIP(sIP).To4().String()
 	if IP == "<nil>" {
-		return false, "", errors.New("Invalid IP passed, expexted IPv4")
+		return false, "", errors.New("invalid IP passed, expected IPv4")
 	}
 
 	found, isVPN, reason, err := rdb.foundInCache(IP)
