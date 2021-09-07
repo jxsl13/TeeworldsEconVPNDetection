@@ -48,34 +48,45 @@ func init() {
 
 // Update updates the teeworlds server list and fetches all of those IPs
 func Update() error {
-	// fetch udp server list
-	addresses, err := browser.GetServerAddresses()
-	if err != nil {
-		return err
-	}
 
-	// add master server IPs
-	mu.Lock()
-	for _, addr := range addresses {
-		ip := addr.IP.String()
-		knownIPs[ip] = true
-	}
-	mu.Unlock()
-
+	oldSize, newSize, ipSize := 0, 0, 0
 	// fetch http server list
 	ips, err := GetHttpServerIPs()
 	if err != nil {
 		return err
 	}
+	ipSize = len(ips)
 
 	// add http master server IPs
 	mu.Lock()
-	defer mu.Unlock()
+	oldSize = len(knownIPs)
 	for _, ip := range ips {
 		knownIPs[ip] = true
 	}
+	newSize = len(knownIPs)
+	mu.Unlock()
+	log.Printf("fetched %d ips from http master servers, cached IPs increased from %d to %d, diff = %d", ipSize, oldSize, newSize, newSize-oldSize)
 
-	log.Printf("known potential proxy IPs: %d\n", len(knownIPs))
+	// fetch udp server list
+	addresses, err := browser.GetServerAddresses()
+	if err != nil {
+		return err
+	}
+	ipSize = len(addresses)
+
+	// add master server IPs
+	mu.Lock()
+	oldSize = len(knownIPs)
+	for _, addr := range addresses {
+		ip := addr.IP.String()
+		knownIPs[ip] = true
+	}
+	newSize = len(knownIPs)
+	mu.Unlock()
+
+	log.Printf("fetched %d ips from 0.7 master servers, cached IPs increased from %d to %d, diff = %d", ipSize, oldSize, newSize, newSize-oldSize)
+
+	log.Printf("cached server IPs: %d\n", newSize)
 	return nil
 }
 
