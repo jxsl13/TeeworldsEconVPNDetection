@@ -32,7 +32,7 @@ ENV ECON_PASSWORDS=""
 ENV VPN_BAN_REASON="VPN"
 ENV VPN_BAN_DURATION="1h"
 # the server that is monitored is a zCatch 0.7 server
-ENV ZCATCH_LOGGING="false"
+ENV LOGGING_FORMAT="Vanilla"
 # whether to ban players joining with a server's IP
 ENV PROXY_DETECTION_ENABLED="false"
 # how ften to fetch the IP list

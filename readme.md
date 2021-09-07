@@ -73,9 +73,11 @@ REDIS_PASSWORD=some_database_password
 
 # optional
 
-# whether you try to monitor a zCatch 0.7.x server or any vanilla based 0.7.x Teeworlds server.
-# if your server has the vanilla logging format, leave this as false
-ZCATCH_LOGGING=false
+# This affects what the kind of player join line the application expects in the 
+// parsed econ logs. Options [Vanilla, zCatch]
+// Vanilla: Expects the econ logs to look like those of a Vanilla Teeworlds server.
+// zCatch: Expects the econ logs to look like those of the zCatch 0.7 server.
+LOGGING_FORMAT=Vanilla
 
 # set this to true in order to only rely on data the can be found in the redis database
 # all of the following VPN detection APIs will not be used in this state.

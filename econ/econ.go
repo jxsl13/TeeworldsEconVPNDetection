@@ -26,10 +26,13 @@ func parseLine(econ *econ.Conn, line string) {
 	cfg := config.New()
 	checker := cfg.Checker()
 
-	switch cfg.ZCatchLogFormat {
-	case true:
+	switch cfg.LogFormat {
+	case "zCatch":
 		matches = playerzCatchJoinRegex.FindStringSubmatch(line)
+	case "Vanilla":
+		fallthrough // fallthrough to default
 	default:
+		// defaults to Vanilla
 		matches = playerVanillaJoinRegex.FindStringSubmatch(line)
 	}
 

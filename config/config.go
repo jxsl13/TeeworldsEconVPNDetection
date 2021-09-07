@@ -74,7 +74,7 @@ type Config struct {
 	VPNBanTime       time.Duration
 	VPNBanReason     string
 	Offline          bool
-	ZCatchLogFormat  bool // parsing of zCatch econ logs (Vanilla log format -> false)
+	LogFormat        string // what econ log format to expect (Vanilla/zCatch)
 
 	ProxyDetectionEnabled bool
 	ProxyUpdateInterval   time.Duration
@@ -218,10 +218,10 @@ func (c *Config) Options() configo.Options {
 			ParseFunction: parsers.Duration(&c.VPNBanTime),
 		},
 		{
-			Key:           "ZCATCH_LOGGING",
-			DefaultValue:  "false",
-			Description:   "whether to use the zCatch log format parser or the vanilla parser",
-			ParseFunction: parsers.Bool(&c.ZCatchLogFormat),
+			Key:           "LOGGING_FORMAT",
+			DefaultValue:  "Vanilla",
+			Description:   "What kind of logging format ALL of the servers use",
+			ParseFunction: parsers.ChoiceString(&c.LogFormat, "Vanilla", "zCatch"),
 		},
 		{
 			Key:           "PROXY_DETECTION_ENABLED",
