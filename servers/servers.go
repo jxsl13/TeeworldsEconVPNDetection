@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/config"
-	"github.com/jxsl13/twapi/browser"
 )
 
 var (
@@ -49,13 +48,12 @@ func init() {
 // Update updates the teeworlds server list and fetches all of those IPs
 func Update() error {
 
-	oldSize, newSize, ipSize := 0, 0, 0
+	oldSize, newSize := 0, 0
 	// fetch http server list
 	ips, err := GetHttpServerIPs()
 	if err != nil {
 		return err
 	}
-	ipSize = len(ips)
 
 	// add http master server IPs
 	mu.Lock()
@@ -65,28 +63,8 @@ func Update() error {
 	}
 	newSize = len(knownIPs)
 	mu.Unlock()
-	log.Printf("fetched %d ips from http master servers, cached IPs increased from %d to %d, diff = %d", ipSize, oldSize, newSize, newSize-oldSize)
 
-	// fetch udp server list
-	addresses, err := browser.GetServerAddresses()
-	if err != nil {
-		return err
-	}
-	ipSize = len(addresses)
-
-	// add master server IPs
-	mu.Lock()
-	oldSize = len(knownIPs)
-	for _, addr := range addresses {
-		ip := addr.IP.String()
-		knownIPs[ip] = true
-	}
-	newSize = len(knownIPs)
-	mu.Unlock()
-
-	log.Printf("fetched %d ips from 0.7 master servers, cached IPs increased from %d to %d, diff = %d", ipSize, oldSize, newSize, newSize-oldSize)
-
-	log.Printf("cached server IPs: %d\n", newSize)
+	log.Printf("cached unique server IPs: %d, added %d new ips\n", newSize, newSize-oldSize)
 	return nil
 }
 
