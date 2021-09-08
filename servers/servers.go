@@ -2,6 +2,7 @@ package servers
 
 import (
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -9,9 +10,10 @@ import (
 )
 
 var (
-	knownIPs = make(map[string]bool, 1024)
-	mu       sync.Mutex
-	cfg      = config.New()
+	// ip -> servers
+	similarServers = make(map[string][]Server, 64)
+	mu             sync.Mutex
+	cfg            = config.New()
 )
 
 func init() {
@@ -47,25 +49,56 @@ func init() {
 
 // Update updates the teeworlds server list and fetches all of those IPs
 func Update() error {
-
-	oldSize, newSize := 0, 0
+	oldServerListSize, newServerListSize := 0, 0
+	oldSimilarServers, newSimilarServers := 0, 0
 	// fetch http server list
-	ips, err := GetHttpServerIPs()
+	m, err := GetSimilarServers()
 	if err != nil {
 		return err
 	}
 
 	// add http master server IPs
+	added := 0
 	mu.Lock()
-	oldSize = len(knownIPs)
-	for _, ip := range ips {
-		knownIPs[ip] = true
+	oldSimilarServers = len(similarServers)
+	for ip, newServers := range m {
+		oldServerListSize = len(similarServers[ip])
+		// append new serers if necessary
+		similarServers[ip] = appendIfNotExists(similarServers[ip], newServers...)
+		newServerListSize = len(similarServers[ip])
+		added += newServerListSize - oldServerListSize
 	}
-	newSize = len(knownIPs)
+	newSimilarServers = len(similarServers)
+	log.Printf("cached unique server IPs: %d, added %d new ips and %d new servers\n", newSimilarServers, newSimilarServers-oldSimilarServers, added)
+	printSimilarServers(similarServers)
 	mu.Unlock()
 
-	log.Printf("cached unique server IPs: %d, added %d new ips\n", newSize, newSize-oldSize)
 	return nil
+}
+
+func printSimilarServers(m map[string][]Server) {
+	sortedIPs := make([]string, 0, len(m))
+	for ip := range m {
+		sortedIPs = append(sortedIPs, ip)
+	}
+	sort.Strings(sortedIPs)
+
+	log.Println("================")
+	log.Println("Similar Servers:")
+	for _, ip := range sortedIPs {
+		log.Printf("%15s:", ip)
+		servers := m[ip]
+		for _, server := range servers {
+			addresses := server.Addresses
+			if len(addresses) == 0 {
+				log.Println("\tno addresses found...")
+				break
+			}
+			addr := addresses[0]
+			log.Printf("\t%v: %s\n", addr, server.Info.Name)
+		}
+	}
+	log.Println("================")
 }
 
 // IsTeeworldsServer checks whether a joining IP resembles that of a known registered Teeworlds server.
@@ -75,5 +108,6 @@ func IsTeeworldsServer(ip string) bool {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	return knownIPs[ip]
+	_, found := similarServers[ip]
+	return found
 }

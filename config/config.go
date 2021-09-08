@@ -6,7 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,10 +80,11 @@ type Config struct {
 	Offline          bool
 	LogFormat        string // what econ log format to expect (Vanilla/zCatch)
 
-	ProxyDetectionEnabled bool
-	ProxyUpdateInterval   time.Duration
-	ProxyBanDuration      time.Duration
-	ProxyBanReason        string
+	ProxyDetectionEnabled   bool
+	ProxyUpdateInterval     time.Duration
+	ProxyBanDuration        time.Duration
+	ProxyServerNameDistance int // distance below which servers are considered similar to our own server
+	ProxyBanReason          string
 
 	AddFile    *string // add ip list to cache
 	RemoveFile *string // remove ip list from cache (executed after adding)
@@ -90,6 +95,8 @@ type Config struct {
 
 	ctx    context.Context    // central context that is canceled once the config is closed
 	cancel context.CancelFunc // called on unparse
+
+	uniqueIps map[string]bool
 }
 
 func (c *Config) Options() configo.Options {
@@ -163,10 +170,29 @@ func (c *Config) Options() configo.Options {
 			},
 		},
 		{
-			Key:             "ECON_ADDRESSES",
-			Mandatory:       true,
-			Description:     "a single space separated list of Teeworlds econ addresses",
-			ParseFunction:   parsers.List(&c.EconServers, &delimiter),
+			Key:           "ECON_ADDRESSES",
+			Mandatory:     true,
+			Description:   "a single space separated list of Teeworlds econ addresses",
+			ParseFunction: parsers.List(&c.EconServers, &delimiter),
+			PostParseAction: func() error {
+				c.uniqueIps = make(map[string]bool, len(c.EconServers))
+				for _, addr := range c.EconServers {
+					parts := strings.SplitN(addr, ":", 2)
+					ip := net.ParseIP(parts[0])
+					if ip == nil {
+						return fmt.Errorf("invalid ip: %s", addr)
+					}
+					port, err := strconv.Atoi(parts[1])
+					if err != nil {
+						return fmt.Errorf("invalid port: %s", addr)
+					}
+					if port <= 0 || math.MaxInt16 < port {
+						return fmt.Errorf("invalid port: %s", addr)
+					}
+					c.uniqueIps[ip.String()] = true
+				}
+				return nil
+			},
 			UnparseFunction: unparsers.List(&c.EconServers, &delimiter),
 		},
 		{
@@ -246,6 +272,12 @@ func (c *Config) Options() configo.Options {
 			DefaultValue:  "24h",
 			Description:   "How long to ban proxy servers",
 			ParseFunction: parsers.Duration(&c.ProxyBanDuration),
+		},
+		{
+			Key:           "PROXY_SERVERNAME_DISTANCE",
+			DefaultValue:  "8",
+			Description:   "distance below which servers are considered similar to our own server (",
+			ParseFunction: parsers.RangesInt(&c.ProxyServerNameDistance, 0, 256),
 		},
 		{
 			Key:           "OFFLINE",
@@ -377,6 +409,10 @@ func (c *Config) apis() []vpn.VPN {
 		}
 	}
 	return apis
+}
+
+func (c *Config) EconServerIPs() map[string]bool {
+	return c.uniqueIps
 }
 
 func (c *Config) Context() context.Context {

@@ -40,6 +40,7 @@ ENV PROXY_UPDATE_INTERVAL="1m"
 
 ENV PROXY_BAN_DURATION="24h"
 ENV PROXY_BAN_REASON="proxy connection"
+ENV PROXY_SERVERNAME_DISTANCE="8"
 
 WORKDIR /app
 COPY --from=build /build/econ_vpn_detection .

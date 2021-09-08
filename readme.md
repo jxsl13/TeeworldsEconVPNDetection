@@ -116,6 +116,15 @@ PROXY_BAN_DURATION="24h"
 PROXY_BAN_REASON="proxy connection"
 
 
+# we fetch the list of all registered Teeworlds servers, get their names and compare them to the names found under the 
+# ip address that our server hosts. If any server that is not hosted on our econ IP is similar to any server that is hosted on our
+# econ IP, those servers are added to the internal server cache, especially their IPs.
+# This parameter controls what it means for two server names to be similar, the lower the value, the more similar the other servers must be
+# in order for them to be concidered as proxies.
+# (value between 0 and 256 (use 256 in order to add every server as potential proxy server))
+PROXY_SERVERNAME_DISTANCE=8
+
+
 # should not be touched
 
 # each connection retries incrementally to reconnect to the server.

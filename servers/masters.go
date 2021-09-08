@@ -28,7 +28,7 @@ func init() {
 	client = resty.New().SetHostURL(host)
 }
 
-func GetHttpServerIPs() ([]string, error) {
+func GetServers() (*HttpMasterServerList, error) {
 	serverList := &HttpMasterServerList{}
 	resp, err := client.R().SetResult(serverList).Get(path)
 	if err != nil {
@@ -37,5 +37,21 @@ func GetHttpServerIPs() ([]string, error) {
 	if resp.StatusCode()/100 != 2 {
 		return nil, fmt.Errorf("failed to fetch http master server list: %s", resp.Status())
 	}
+	return serverList, nil
+}
+
+func GetHttpServerIPs() ([]string, error) {
+	serverList, err := GetServers()
+	if err != nil {
+		return nil, err
+	}
 	return serverList.ServerIPs(), nil
+}
+
+func GetSimilarServers() (map[string][]Server, error) {
+	h, err := GetServers()
+	if err != nil {
+		return nil, err
+	}
+	return h.SimilarServers(), nil
 }
