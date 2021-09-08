@@ -129,9 +129,8 @@ func appendIfNotExists(olds []Server, others ...Server) []Server {
 		}
 		if found {
 			continue
-		} else {
-			result = append(result, other)
 		}
+		result = append(result, other)
 	}
 
 	return result
