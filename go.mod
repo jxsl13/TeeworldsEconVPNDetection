@@ -8,7 +8,7 @@ require (
 	github.com/jxsl13/simple-configo v1.22.0
 	github.com/jxsl13/twapi v1.3.1
 	github.com/onsi/gomega v1.16.0 // indirect
-	golang.org/x/text v0.3.6
+	golang.org/x/text v0.3.8
 )
 
 replace (
