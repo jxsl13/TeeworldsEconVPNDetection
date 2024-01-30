@@ -54,23 +54,24 @@ Use `sample.env` as reference or check out the help of the application.
 
 Run the econ log parser with the VPN detection.
 ```shell
+$ ./TeeworldsEconVPNDetectionGo --help
 Environment variables:
   TWVPN_IPHUB_TOKEN
   TWVPN_PROXYCHECK_TOKEN
   TWVPN_IPTEOH_ENABLED          (default: "false")
   TWVPN_REDIS_ADDRESS           (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD
-  TWVPN_REDIS_DB_VPN            (default: "0")
-  TWVPN_ECON_ADDRESSES
-  TWVPN_ECON_PASSWORDS
+  TWVPN_REDIS_DB_VPN            (default: "15")
+  TWVPN_ECON_ADDRESSES         comma separated list of econ addresses
+  TWVPN_ECON_PASSWORDS         comma separated list of econ passwords
   TWVPN_RECONNECT_DELAY         (default: "10s")
   TWVPN_RECONNECT_TIMEOUT       (default: "24h0m0s")
   TWVPN_VPN_BAN_DURATION        (default: "5m0s")
   TWVPN_VPN_BAN_REASON          (default: "VPN")
   TWVPN_OFFLINE                 (default: "false")
   TWVPN_PERMA_BAN_THRESHOLD     (default: "0.6")
-  TWVPN_IP_WHITELIST
-  TWVPN_IP_BLACKLIST
+  TWVPN_IP_WHITELIST           comma separated list of ip ranges to whitelist
+  TWVPN_IP_BLACKLIST           comma separated list of ip ranges to blacklist
 
 Usage:
   TeeworldsEconVPNDetectionGo [flags]
@@ -84,11 +85,11 @@ Available Commands:
 
 Flags:
   -c, --config string                .env config file path (or via env variable TWVPN_CONFIG)
-      --econ-addresses string
-      --econ-passwords string
+      --econ-addresses string        comma separated list of econ addresses
+      --econ-passwords string        comma separated list of econ passwords
   -h, --help                         help for TeeworldsEconVPNDetectionGo
-      --ip-blacklist string
-      --ip-whitelist string
+      --ip-blacklist string          comma separated list of ip ranges to blacklist
+      --ip-whitelist string          comma separated list of ip ranges to whitelist
       --iphub-token string
       --ipteoh-enabled
       --offline
@@ -97,7 +98,7 @@ Flags:
       --reconnect-delay duration      (default 10s)
       --reconnect-timeout duration    (default 24h0m0s)
       --redis-address string          (default "localhost:6379")
-      --redis-db-vpn int
+      --redis-db-vpn int              (default 15)
       --redis-password string
       --vpn-ban-duration duration     (default 5m0s)
       --vpn-ban-reason string         (default "VPN")
@@ -107,37 +108,39 @@ Use "TeeworldsEconVPNDetectionGo [command] --help" for more information about a 
 
 Add ips to the database (blacklist)
 ```shell
+$ ./TeeworldsEconVPNDetectionGo add --help
 Environment variables:
   TWVPN_REDIS_ADDRESS      (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD
-  TWVPN_REDIS_DB_VPN       (default: "0")
+  TWVPN_REDIS_DB_VPN       (default: "15")
 
 Usage:
-  TeeworldsEconVPNDetectionGo add [flags]
+  TeeworldsEconVPNDetectionGo add blacklist.txt [more-banlists.txt...] [flags]
 
 Flags:
   -c, --config string           .env config file path (or via env variable TWVPN_CONFIG)
   -h, --help                    help for add
       --redis-address string     (default "localhost:6379")
-      --redis-db-vpn int
+      --redis-db-vpn int         (default 15)
       --redis-password string
 ```
 
 Remove ips from the database (whitelist)
 ```shell
+$ ./TeeworldsEconVPNDetectionGo remove --help
 Environment variables:
   TWVPN_REDIS_ADDRESS      (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD
-  TWVPN_REDIS_DB_VPN       (default: "0")
+  TWVPN_REDIS_DB_VPN       (default: "15")
 
 Usage:
-  TeeworldsEconVPNDetectionGo remove [flags]
+  TeeworldsEconVPNDetectionGo remove whitelist.txt [more-whitelists.txt...] [flags]
 
 Flags:
   -c, --config string           .env config file path (or via env variable TWVPN_CONFIG)
   -h, --help                    help for remove
       --redis-address string     (default "localhost:6379")
-      --redis-db-vpn int
+      --redis-db-vpn int         (default 15)
       --redis-password string
 ```
 
