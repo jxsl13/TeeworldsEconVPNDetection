@@ -22,9 +22,10 @@ services:
   econ-vpn-detection:
     env_file: .env
     container_name: econ-vpn-detection
-    build: .
+    image: ghcr.io/jxsl13/teeworldseconvpndetectiongo:master
+    #build: . # uncomment if you want to build the image yourself
     restart: unless-stopped
-    command: 
+    command:
       - --add
       - /data/blacklists/blacklist.txt
       - --remove
