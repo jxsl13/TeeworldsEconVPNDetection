@@ -56,19 +56,19 @@ Run the econ log parser with the VPN detection.
 ```shell
 $ ./TeeworldsEconVPNDetectionGo --help
 Environment variables:
-  TWVPN_IPHUB_TOKEN
-  TWVPN_PROXYCHECK_TOKEN
+  TWVPN_IPHUB_TOKEN            api key for iphub.info
+  TWVPN_PROXYCHECK_TOKEN       api key for proxycheck.io
   TWVPN_IPTEOH_ENABLED          (default: "false")
   TWVPN_REDIS_ADDRESS           (default: "localhost:6379")
-  TWVPN_REDIS_PASSWORD
-  TWVPN_REDIS_DB_VPN            (default: "15")
+  TWVPN_REDIS_PASSWORD         optional password for the redis database
+  TWVPN_REDIS_DB_VPN           redis database to use for the vpn ip data (0-15) (default: "15")
   TWVPN_ECON_ADDRESSES         comma separated list of econ addresses
   TWVPN_ECON_PASSWORDS         comma separated list of econ passwords
   TWVPN_RECONNECT_DELAY         (default: "10s")
   TWVPN_RECONNECT_TIMEOUT       (default: "24h0m0s")
   TWVPN_VPN_BAN_DURATION        (default: "5m0s")
   TWVPN_VPN_BAN_REASON          (default: "VPN")
-  TWVPN_OFFLINE                 (default: "false")
+  TWVPN_OFFLINE                 if set to true no api calls will be made if an ip was not found in the database (= distributed ban server) (default: "false")
   TWVPN_PERMA_BAN_THRESHOLD     (default: "0.6")
   TWVPN_IP_WHITELIST           comma separated list of ip ranges to whitelist
   TWVPN_IP_BLACKLIST           comma separated list of ip ranges to blacklist
@@ -90,16 +90,16 @@ Flags:
   -h, --help                         help for TeeworldsEconVPNDetectionGo
       --ip-blacklist string          comma separated list of ip ranges to blacklist
       --ip-whitelist string          comma separated list of ip ranges to whitelist
-      --iphub-token string
+      --iphub-token string           api key for iphub.info
       --ipteoh-enabled
-      --offline
+      --offline                       if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)
       --perma-ban-threshold float     (default 0.6)
-      --proxycheck-token string
+      --proxycheck-token string      api key for proxycheck.io
       --reconnect-delay duration      (default 10s)
       --reconnect-timeout duration    (default 24h0m0s)
       --redis-address string          (default "localhost:6379")
-      --redis-db-vpn int              (default 15)
-      --redis-password string
+      --redis-db-vpn int             redis database to use for the vpn ip data (0-15) (default 15)
+      --redis-password string        optional password for the redis database
       --vpn-ban-duration duration     (default 5m0s)
       --vpn-ban-reason string         (default "VPN")
 

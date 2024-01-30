@@ -37,13 +37,13 @@ func New() *Config {
 
 // Config represents the application configuration
 type Config struct {
-	IPHubToken      string `koanf:"iphub.token"`
-	ProxyCheckToken string `koanf:"proxycheck.token"`
+	IPHubToken      string `koanf:"iphub.token" description:"api key for iphub.info"`
+	ProxyCheckToken string `koanf:"proxycheck.token" description:"api key for proxycheck.io"`
 	IPTeohEnabled   bool   `koanf:"ipteoh.enabled"`
 
 	RedisAddress  string `koanf:"redis.address" validate:"required"`
-	RedisPassword string `koanf:"redis.password"`
-	RedisDB       int    `koanf:"redis.db.vpn"`
+	RedisPassword string `koanf:"redis.password" description:"optional password for the redis database"`
+	RedisDB       int    `koanf:"redis.db.vpn" validate:"gte=0,lte=15" description:"redis database to use for the vpn ip data (0-15)"`
 
 	EconServersString string `koanf:"econ.addresses" validate:"required" description:"comma separated list of econ addresses"`
 	EconServers       []string
@@ -54,7 +54,7 @@ type Config struct {
 	ReconnectTimeout    time.Duration `koanf:"reconnect.timeout" validate:"required"`
 	VPNBanTime          time.Duration `koanf:"vpn.ban.duration" validate:"required"`
 	VPNBanReason        string        `koanf:"vpn.ban.reason" validate:"required"`
-	Offline             bool          `koanf:"offline"`
+	Offline             bool          `koanf:"offline" description:" if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)"`
 
 	BanThreshold float64 `koanf:"perma.ban.threshold" validate:"required"`
 
