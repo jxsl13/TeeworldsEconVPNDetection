@@ -48,7 +48,11 @@ func parseFileAndAddIPsToCache(ctx context.Context, r *goripr.Client, filename s
 		if err != nil {
 			continue
 		}
-		fmt.Printf("adding %s(%s)\n", ip, reason)
+		if reason == "" {
+			fmt.Printf("adding %s\n", ip)
+		} else {
+			fmt.Printf("adding %s (%s)\n", ip, reason)
+		}
 		err = r.Insert(ctx, ip, reason)
 		if err != nil {
 			return 0, fmt.Errorf("%w: %s", err, line)
