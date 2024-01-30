@@ -18,11 +18,11 @@ func NewAddCmd(ctx context.Context) *cobra.Command {
 
 	// cmd represents the run command
 	cmd := &cobra.Command{
-		Use:          "add",
+		Use:          "add blacklist.txt [more-banlists.txt...]",
 		Short:        "add ips to the database (blacklist)",
 		SilenceUsage: true,
 		RunE:         addContext.RunE,
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MinimumNArgs(1),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			if addContext.Ripr != nil {
 				return addContext.Ripr.Close()
@@ -37,10 +37,10 @@ func NewAddCmd(ctx context.Context) *cobra.Command {
 }
 
 type addContext struct {
-	Ctx      context.Context
-	Config   *config.ConnectConfig
-	Ripr     *goripr.Client
-	FilePath string
+	Ctx       context.Context
+	Config    *config.ConnectConfig
+	Ripr      *goripr.Client
+	FilePaths []string
 }
 
 func (c *addContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, args []string) error {
@@ -69,20 +69,23 @@ func (c *addContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, args [
 
 		c.Ripr = ripr
 
-		c.FilePath = args[0]
+		c.FilePaths = args
 		return nil
 	}
 }
 
 func (c *addContext) RunE(cmd *cobra.Command, args []string) error {
-	added, err := parseFileAndAddIPsToCache(
-		c.Ctx,
-		c.Ripr,
-		c.FilePath,
-	)
-	if err != nil {
-		return err
+	for _, file := range c.FilePaths {
+		fmt.Printf("adding ips from %s\n", file)
+		added, err := parseFileAndAddIPsToCache(
+			c.Ctx,
+			c.Ripr,
+			file,
+		)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("added %d ip ranges from %s to the database\n", added, file)
 	}
-	fmt.Printf("added %d ip ranges to the database\n", added)
 	return nil
 }

@@ -48,6 +48,7 @@ func parseFileAndAddIPsToCache(ctx context.Context, r *goripr.Client, filename s
 		if err != nil {
 			continue
 		}
+		fmt.Printf("adding %s(%s)\n", ip, reason)
 		err = r.Insert(ctx, ip, reason)
 		if err != nil {
 			return 0, fmt.Errorf("%w: %s", err, line)
@@ -73,6 +74,7 @@ func parseFileAndRemoveIPsFromCache(ctx context.Context, r *goripr.Client, filen
 		if err != nil {
 			continue
 		}
+		fmt.Printf("removing %s\n", ip)
 		err = r.Remove(ctx, ip)
 		if err != nil {
 			return 0, err

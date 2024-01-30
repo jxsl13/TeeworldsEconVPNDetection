@@ -18,11 +18,11 @@ func NewRemoveCmd(ctx context.Context) *cobra.Command {
 
 	// cmd represents the run command
 	cmd := &cobra.Command{
-		Use:          "remove",
+		Use:          "remove whitelist.txt [more-whitelists.txt...]",
 		Short:        "remove ips from the database (whitelist)",
 		SilenceUsage: true,
 		RunE:         removeContext.RunE,
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MinimumNArgs(1),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			if removeContext.Ripr != nil {
 				return removeContext.Ripr.Close()
@@ -37,10 +37,10 @@ func NewRemoveCmd(ctx context.Context) *cobra.Command {
 }
 
 type removeContext struct {
-	Ctx      context.Context
-	Config   *config.ConnectConfig
-	Ripr     *goripr.Client
-	FilePath string
+	Ctx       context.Context
+	Config    *config.ConnectConfig
+	Ripr      *goripr.Client
+	FilePaths []string
 }
 
 func (c *removeContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, args []string) error {
@@ -68,20 +68,23 @@ func (c *removeContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, arg
 		}
 
 		c.Ripr = ripr
-		c.FilePath = args[0]
+		c.FilePaths = args
 		return nil
 	}
 }
 
 func (c *removeContext) RunE(cmd *cobra.Command, args []string) error {
-	removed, err := parseFileAndRemoveIPsFromCache(
-		c.Ctx,
-		c.Ripr,
-		c.FilePath,
-	)
-	if err != nil {
-		return err
+	for _, file := range c.FilePaths {
+		fmt.Printf("removing ips from %s\n", file)
+		removed, err := parseFileAndRemoveIPsFromCache(
+			c.Ctx,
+			c.Ripr,
+			file,
+		)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("removed %d ip ranges from the database\n", removed)
 	}
-	fmt.Printf("removed %d ip ranges from the database\n", removed)
 	return nil
 }
