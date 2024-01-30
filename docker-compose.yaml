@@ -8,7 +8,7 @@ services:
     container_name: redis
     image: redis:alpine
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:?err}
+    command: redis-server --requirepass ${TWVPN_REDIS_PASSWORD:?err}
     networks:
       - redis-network
     ports:
@@ -38,26 +38,20 @@ services:
       - redis
     environment:
       # mandatory
-      ECON_ADDRESSES: ${ECON_ADDRESSES:?err}
-      ECON_PASSWORDS: ${ECON_PASSWORDS:?err}
-      REDIS_ADDRESS: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?err}
+      TWVPN_ECON_ADDRESSES: ${TWVPN_ECON_ADDRESSES:?err}
+      TWVPN_ECON_PASSWORDS: ${TWVPN_ECON_PASSWORDS:?err}
+      TWVPN_REDIS_ADDRESS: redis:6379
+      TWVPN_REDIS_PASSWORD: ${TWVPN_REDIS_PASSWORD:?err}
       # optional
-      OFFLINE: ${OFFLINE:?false}
-      IPHUB_TOKEN: ${IPHUB_TOKEN:-}
-      PROXYCHECK_TOKEN: ${PROXYCHECK_TOKEN:-}
-      IPTEOH_ENABLED: ${IPTEOH_ENABLED:-false}
-      PERMABAN_THRESHOLD: ${PERMABAN_THRESHOLD:-0.6}
-      REDIS_DB_VPN: ${REDIS_DB_VPN:-0}
-      VPN_BAN_REASON: ${VPN_BAN_REASON:-VPN}
-      VPN_BAN_DURATION: ${VPN_BAN_DURATION:-1h}
-      LOGGING_FORMAT: ${LOGGING_FORMAT:-Vanilla}
-      PROXY_DETECTION_ENABLED: ${PROXY_DETECTION_ENABLED:-false}
-      PROXY_UPDATE_INTERVAL: ${PROXY_UPDATE_INTERVAL:-1m}
-      PROXY_BAN_REASON: ${PROXY_BAN_REASON:-proxy connection}
-      PROXY_BAN_DURATION: ${PROXY_BAN_DURATION:-24h}
-      PROXY_SERVERNAME_DISTANCE: ${PROXY_SERVERNAME_DISTANCE:-8}
- 
+      TWVPN_IPHUB_TOKEN: ${TWVPN_IPHUB_TOKEN:-}
+      TWVPN_IPTEOH_ENABLED: ${TWVPN_IPTEOH_ENABLED:-false}
+      TWVPN_OFFLINE: ${TWVPN_OFFLINE:?false}
+      TWVPN_PERMA_BAN_THRESHOLD: ${TWVPN_PERMA_BAN_THRESHOLD:-0.6}
+      TWVPN_PROXYCHECK_TOKEN: ${TWVPN_PROXYCHECK_TOKEN:-}
+      TWVPN_REDIS_DB_VPN: ${TWVPN_REDIS_DB_VPN:-0}
+      TWVPN_VPN_BAN_DURATION: ${TWVPN_VPN_BAN_DURATION:-1h}
+      TWVPN_VPN_BAN_REASON: ${TWVPN_VPN_BAN_REASON:-VPN}
+
 networks:
   redis-network:
     external: false
