@@ -51,12 +51,9 @@ go build .
 You may use a `.env` config file for configuring the application.
 Use `sample.env` as reference or check out the help of the application.
 
-```shell
-You can automatically add all of those IPs and the IPs from the subnets to your redis cache.
-In order for such a file to be parsed, you can pass it on startup to the application like this:
 
 Run the econ log parser with the VPN detection.
-```text
+```shell
 Environment variables:
   TWVPN_IPHUB_TOKEN
   TWVPN_PROXYCHECK_TOKEN
