@@ -11,14 +11,14 @@ import (
 
 type ConnectConfig struct {
 	RedisAddress  string `koanf:"redis.address" validate:"required"`
-	RedisPassword string `koanf:"redis.password" validate:"required"`
+	RedisPassword string `koanf:"redis.password"`
 	RedisDB       int    `koanf:"redis.db.vpn"`
 }
 
 func NewConnect() *ConnectConfig {
 	return &ConnectConfig{
 		RedisAddress: "localhost:6379",
-		RedisDB:      0,
+		RedisDB:      15,
 	}
 }
 

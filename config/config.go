@@ -26,7 +26,7 @@ func New() *Config {
 	return &Config{
 		IPTeohEnabled:    false,
 		RedisAddress:     "localhost:6379",
-		RedisDB:          0,
+		RedisDB:          15,
 		ReconnectDelay:   10 * time.Second,
 		ReconnectTimeout: 24 * time.Hour,
 		VPNBanReason:     "VPN",
@@ -42,7 +42,7 @@ type Config struct {
 	IPTeohEnabled   bool   `koanf:"ipteoh.enabled"`
 
 	RedisAddress  string `koanf:"redis.address" validate:"required"`
-	RedisPassword string `koanf:"redis.password" validate:"required"`
+	RedisPassword string `koanf:"redis.password"`
 	RedisDB       int    `koanf:"redis.db.vpn"`
 
 	EconServersString string `koanf:"econ.addresses" validate:"required" description:"comma separated list of econ addresses"`
