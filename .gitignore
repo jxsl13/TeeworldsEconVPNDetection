@@ -1,5 +1,9 @@
 .env
-TeeworldsEconVPNDetectionGo 
+TeeworldsEconVPNDetectionGo
 *.txt
 .vscode/settings.json
 .DS_Store
+__debug_bin*
+!sample.env
+*.env
+volumes/*

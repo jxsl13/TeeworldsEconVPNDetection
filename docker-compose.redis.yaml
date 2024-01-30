@@ -1,0 +1,23 @@
+version: "2.4"
+
+
+services:
+  # key value store
+  redis:
+    env_file: .env
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?err}
+    networks:
+      - redis-network
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./volumes/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./volumes/redis/config:/usr/local/etc/redis
+      - ./volumes/redis/data:/data
+
+networks:
+  redis-network:
+    external: false

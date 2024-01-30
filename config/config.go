@@ -3,36 +3,19 @@ package config
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
-	"log"
-	"math"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-playground/validator/v10"
 	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
-	"github.com/jxsl13/goripr"
-	configo "github.com/jxsl13/simple-configo"
-	"github.com/jxsl13/simple-configo/actions"
-	"github.com/jxsl13/simple-configo/parsers"
-	"github.com/jxsl13/simple-configo/unparsers"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
 	errRedisDatabaseNotFound   = errors.New("could not connect to the redis database, check your REDIS_ADDRESS, REDIS_PASSWORD and make sure your redis database is running")
 	errAddressPasswordMismatch = errors.New("the number of ECON_PASSWORD doesn't match the number of ECON_ADDRESSES, either provide one password for all addresses or one password per address")
-
-	cfg       = (*Config)(nil)
-	once      sync.Once
-	closeOnce sync.Once
-
-	// DefaultEnvFile can be changed to a different env file location.
-	DefaultEnvFile = ".env"
 )
 
 // New creates a new configuration file based on
@@ -40,399 +23,108 @@ var (
 // any call after the first one will return the config of the first call
 // the location of the .env file can be changed via the DefaultEnvFile variable
 func New() *Config {
-	return newFromFile(DefaultEnvFile)
-}
-
-func newFromFile(dotEnvFilePath string) *Config {
-	if cfg != nil {
-		return cfg
+	return &Config{
+		IPTeohEnabled:    false,
+		RedisAddress:     "localhost:6379",
+		RedisDB:          0,
+		ReconnectDelay:   10 * time.Second,
+		ReconnectTimeout: 24 * time.Hour,
+		VPNBanReason:     "VPN",
+		VPNBanTime:       5 * time.Minute,
+		BanThreshold:     0.6,
 	}
-
-	once.Do(func() {
-		c := &Config{}
-		err := configo.ParseEnvFileOrEnv(dotEnvFilePath, c)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		cfg = c
-	})
-	return cfg
 }
 
 // Config represents the application configuration
 type Config struct {
-	IPHubToken      string
-	ProxyCheckToken string
-	IpTeohEnabled   bool
+	IPHubToken      string `koanf:"iphub.token"`
+	ProxyCheckToken string `koanf:"proxycheck.token"`
+	IPTeohEnabled   bool   `koanf:"ipteoh.enabled"`
 
-	HttpMasterServerUrl string // url to the .json file of the ddnet http master server
+	RedisAddress  string `koanf:"redis.address" validate:"required"`
+	RedisPassword string `koanf:"redis.password" validate:"required"`
+	RedisDB       int    `koanf:"redis.db.vpn"`
 
-	RedisAddress     string
-	RedisPassword    string
-	RedisDB          int
-	EconServers      []string
-	EconPasswords    []string
-	ReconnectDelay   time.Duration
-	ReconnectTimeout time.Duration
-	VPNBanTime       time.Duration
-	VPNBanReason     string
-	Offline          bool
-	LogFormat        string // what econ log format to expect (Vanilla/zCatch)
+	EconServersString string `koanf:"econ.addresses" validate:"required" description:"comma separated list of econ addresses"`
+	EconServers       []string
 
-	ProxyDetectionEnabled   bool
-	ProxyUpdateInterval     time.Duration
-	ProxyBanDuration        time.Duration
-	ProxyServerNameDistance int // distance below which servers are considered similar to our own server
-	ProxyBanReason          string
+	EconPasswordsString string `koanf:"econ.passwords" validate:"required" description:"comma separated list of econ passwords"`
+	EconPasswords       []string
+	ReconnectDelay      time.Duration `koanf:"reconnect.delay" validate:"required"`
+	ReconnectTimeout    time.Duration `koanf:"reconnect.timeout" validate:"required"`
+	VPNBanTime          time.Duration `koanf:"vpn.ban.duration" validate:"required"`
+	VPNBanReason        string        `koanf:"vpn.ban.reason" validate:"required"`
+	Offline             bool          `koanf:"offline"`
 
-	AddFile    *string // add ip list to cache
-	RemoveFile *string // remove ip list from cache (executed after adding)
+	BanThreshold float64 `koanf:"perma.ban.threshold" validate:"required"`
 
-	ripr              *goripr.Client // redis cache client
-	checker           *VPNChecker    // online api checker client
-	PermaBanThreshold float64        // how many percent of the checker apis needed to perma ban the checked ip
+	Whitelist string `koanf:"ip.whitelist" description:"comma separated list of ip ranges to whitelist"`
+	Blacklist string `koanf:"ip.blacklist" description:"comma separated list of ip ranges to blacklist"`
 
-	ctx    context.Context    // central context that is canceled once the config is closed
-	cancel context.CancelFunc // called on unparse
-
-	uniqueIps map[string]bool
+	Whitelists []string
+	Blacklists []string
 }
 
-func (c *Config) Options() configo.Options {
-
-	delimiter := ""
-
-	return configo.Options{
-		{
-			Key:           "DELIMITER",
-			Description:   "delimiting character that is used to split lists",
-			DefaultValue:  " ",
-			ParseFunction: parsers.String(&delimiter),
-		},
-		{
-			Key:           "IPHUB_TOKEN",
-			Description:   "API key that is provided via any tier by https://iphub.info",
-			ParseFunction: parsers.String(&c.IPHubToken),
-		},
-		{
-			Key:           "PROXYCHECK_TOKEN",
-			Description:   "API key that is provided via https://proxycheck.io",
-			ParseFunction: parsers.String(&c.ProxyCheckToken),
-		},
-		{
-			Key:           "IPTEOH_ENABLED",
-			Description:   "Wether to use the https://ip.teoh.io api",
-			DefaultValue:  "false",
-			ParseFunction: parsers.Bool(&c.IpTeohEnabled),
-		},
-		{
-			Key:           "HTTP_MASTERSERVER_JSON_URL",
-			DefaultValue:  "https://master1.ddnet.tw/ddnet/15/servers.json",
-			ParseFunction: parsers.String(&c.HttpMasterServerUrl),
-		},
-		{
-			Key:           "REDIS_ADDRESS",
-			Mandatory:     true,
-			Description:   "address of your redis database",
-			DefaultValue:  "localhost:6379",
-			ParseFunction: parsers.String(&c.RedisAddress),
-		},
-		{
-			Key:           "REDIS_PASSWORD",
-			Description:   "password of your redis database",
-			ParseFunction: parsers.String(&c.RedisPassword),
-		},
-		{
-			Key:           "REDIS_DB_VPN",
-			Mandatory:     true,
-			Description:   "database to use in your redis instance [0,15](default: 0)",
-			DefaultValue:  "0",
-			ParseFunction: parsers.RangesInt(&c.RedisDB, 0, 15),
-		},
-		{
-			Key: "Redis Ping Pong Check",
-			PreParseAction: func() error {
-				options := redis.Options{
-					Addr:     c.RedisAddress,
-					Password: c.RedisPassword,
-					DB:       c.RedisDB,
-				}
-
-				redisClient := redis.NewClient(&options)
-				defer redisClient.Close()
-
-				pong, err := redisClient.Ping().Result()
-				if err != nil || pong != "PONG" {
-					return fmt.Errorf("%w: %v", errRedisDatabaseNotFound, err)
-				}
-				return nil
-			},
-		},
-		{
-			Key:           "ECON_ADDRESSES",
-			Mandatory:     true,
-			Description:   "a single space separated list of Teeworlds econ addresses",
-			ParseFunction: parsers.List(&c.EconServers, &delimiter),
-			PostParseAction: func() error {
-				c.uniqueIps = make(map[string]bool, len(c.EconServers))
-				for _, addr := range c.EconServers {
-					parts := strings.SplitN(addr, ":", 2)
-					ip := net.ParseIP(parts[0])
-					if ip == nil {
-						return fmt.Errorf("invalid ip: %s", addr)
-					}
-					port, err := strconv.Atoi(parts[1])
-					if err != nil {
-						return fmt.Errorf("invalid port: %s", addr)
-					}
-					if port <= 0 || math.MaxInt16 < port {
-						return fmt.Errorf("invalid port: %s", addr)
-					}
-					c.uniqueIps[ip.String()] = true
-				}
-				return nil
-			},
-			UnparseFunction: unparsers.List(&c.EconServers, &delimiter),
-		},
-		{
-			Key:             "ECON_PASSWORDS",
-			Mandatory:       true,
-			Description:     "a single space separated list of Teeworlds econ passwords. enter a single password for all servers.",
-			ParseFunction:   parsers.List(&c.EconPasswords, &delimiter),
-			UnparseFunction: unparsers.List(&c.EconPasswords, &delimiter),
-		},
-		{
-			Key: "ECON_ADDRESSES & ECON_PASSWORDS consolidation",
-			PreParseAction: func() error {
-				// add password for every econ server.
-				if len(c.EconServers) != len(c.EconPasswords) {
-					if len(c.EconServers) > 1 && len(c.EconPasswords) > 1 {
-						return errAddressPasswordMismatch
-					}
-					if len(c.EconServers) > 1 && len(c.EconPasswords) == 1 {
-						for len(c.EconPasswords) < len(c.EconServers) {
-							c.EconPasswords = append(c.EconPasswords, c.EconPasswords[0])
-						}
-					}
-				}
-				return nil
-			},
-		},
-		{
-			Key:           "RECONNECT_TIMEOUT",
-			DefaultValue:  "24h",
-			Description:   "after how much time a reconnect is concidered not feasible (default: 5m, may use 1h5m10s500ms)",
-			ParseFunction: parsers.Duration(&c.ReconnectTimeout),
-		},
-		{
-			Key:           "RECONNECT_DELAY",
-			DefaultValue:  "10s",
-			Description:   "after how much time to try reconnecting to the database again.",
-			ParseFunction: parsers.Duration(&c.ReconnectDelay),
-		},
-		{
-			Key:           "VPN_BAN_REASON",
-			DefaultValue:  "VPN",
-			Description:   "ban reason message",
-			ParseFunction: parsers.String(&c.VPNBanReason),
-		},
-		{
-			Key:           "VPN_BAN_DURATION",
-			DefaultValue:  "5m",
-			Description:   "for how long a vpn client is banned.",
-			ParseFunction: parsers.Duration(&c.VPNBanTime),
-		},
-		{
-			Key:           "LOGGING_FORMAT",
-			DefaultValue:  "Vanilla",
-			Description:   "What kind of logging format ALL of the servers use",
-			ParseFunction: parsers.ChoiceString(&c.LogFormat, "Vanilla", "zCatch"),
-		},
-		{
-			Key:           "PROXY_DETECTION_ENABLED",
-			DefaultValue:  "false",
-			Description:   "whether to periodically fetch the list of teeworlds servers and add those server IPs to an internal ban list",
-			ParseFunction: parsers.Bool(&c.ProxyDetectionEnabled),
-		},
-		{
-			Key:           "PROXY_UPDATE_INTERVAL",
-			DefaultValue:  "1m",
-			Description:   "how long to wait before updating the IP list of registered Teeworlds servers that might act as proxies",
-			ParseFunction: parsers.Duration(&c.ProxyUpdateInterval),
-		},
-		{
-			Key:           "PROXY_BAN_REASON",
-			DefaultValue:  "proxy connection",
-			Description:   "The ban reason for users that connect through a proxy game server (stealing accounts etc)",
-			ParseFunction: parsers.String(&c.ProxyBanReason),
-		},
-		{
-			Key:           "PROXY_BAN_DURATION",
-			DefaultValue:  "24h",
-			Description:   "How long to ban proxy servers",
-			ParseFunction: parsers.Duration(&c.ProxyBanDuration),
-		},
-		{
-			Key:           "PROXY_SERVERNAME_DISTANCE",
-			DefaultValue:  "8",
-			Description:   "distance below which servers are considered similar to our own server (",
-			ParseFunction: parsers.RangesInt(&c.ProxyServerNameDistance, 0, 256),
-		},
-		{
-			Key:           "OFFLINE",
-			DefaultValue:  "false",
-			Description:   "offline solely uses the redis database to evaluate the ips. no online services are used.",
-			ParseFunction: parsers.Bool(&c.Offline),
-		},
-		{
-			Key: "Parse Flags",
-			PreParseAction: func() error {
-				addFile := ""
-				removeFile := ""
-				offline := false
-				flag.StringVar(&addFile, "add", "", "pass a text file with IPs and IP subnets to be added to the database")
-				flag.StringVar(&removeFile, "remove", "", "pass a text file with IPs and IP subnets to be removed from the database")
-				flag.BoolVar(&offline, "offline", false, "do not use the api endpoints, only rely on the cache")
-				flag.Parse()
-
-				if addFile != "" {
-					log.Printf("blacklist location: %s\n", addFile)
-					c.AddFile = &addFile
-				}
-
-				if removeFile != "" {
-					log.Printf("whitelist location: %s\n", removeFile)
-					c.RemoveFile = &removeFile
-				}
-
-				// only overwrite if flag is set to true
-				if !c.Offline && offline {
-					c.Offline = offline
-				}
-
-				return nil
-			},
-		},
-		{
-			Key: "Add IPs to Redis Cache & Remove IPs from Redis Cache",
-			PreParseAction: actions.OnlyIfNotNil(
-				c.AddFile,
-				func() error {
-					i, err := parseFileAndAddIPsToCache(*c.AddFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
-					if err != nil {
-						return err
-					}
-					log.Printf("added %d ips or ip range to redis database: %s\n", i, *c.AddFile)
-					return nil
-				}),
-			PostParseAction: actions.OnlyIfNotNil(
-				c.RemoveFile,
-				func() error {
-					i, err := parseFileAndRemoveIPsFromCache(*c.RemoveFile, c.RedisAddress, c.RedisPassword, c.RedisDB)
-					if err != nil {
-						return err
-					}
-					log.Printf("removed %d ips or ip range from redis database: %s\n", i, *c.RemoveFile)
-					return nil
-				}),
-		},
-		{
-			Key: "Initialize Goripr",
-			PreParseAction: func() error {
-				log.Println("initializing goripr...")
-				ripr, err := goripr.NewClient(goripr.Options{
-					Addr:     c.RedisAddress,
-					Password: c.RedisPassword,
-					DB:       c.RedisDB,
-				})
-				if err != nil {
-					return err
-				}
-				c.ripr = ripr
-				return nil
-			},
-		},
-		{
-			Key: "Initialize Online VPN Checker",
-			PreParseAction: func() error {
-				c.checker = newVPNChecker(c)
-				log.Println("initialized vpn checker...")
-				return nil
-			},
-			PreUnparseAction: func() error {
-				// called on unparsing
-				log.Println("closing vpn checker...")
-				return c.checker.Close()
-			},
-		},
-		{
-			Key:           "PERMABAN_THRESHOLD",
-			Description:   "How many percent of all of the vpn detection apis need to detect an ip as VPN in order for it to be permanently banned",
-			DefaultValue:  "0.6",
-			ParseFunction: parsers.Float(&c.PermaBanThreshold, 64),
-		},
-		{
-			Key: "Initialize Context",
-			PreParseAction: func() error {
-				log.Println("initializing context...")
-				c.ctx, c.cancel = context.WithCancel(context.Background())
-				return nil
-			},
-			PreUnparseAction: func() error {
-				log.Println("closing context...")
-				// called on close
-				c.cancel()
-				return nil
-			},
-		},
+func (c *Config) Validate() error {
+	err := validator.New().Struct(c)
+	if err != nil {
+		return err
 	}
+
+	c.EconServers = strings.Split(c.EconServersString, ",")
+	c.EconPasswords = strings.Split(c.EconPasswordsString, ",")
+	c.Whitelists = strings.Split(c.Whitelist, ",")
+	c.Blacklists = strings.Split(c.Blacklist, ",")
+
+	// add password for every econ server.
+	if len(c.EconServers) != len(c.EconPasswords) {
+		if len(c.EconServers) > 1 && len(c.EconPasswords) > 1 {
+			return errAddressPasswordMismatch
+		}
+		if len(c.EconServers) > 1 && len(c.EconPasswords) == 1 {
+			for len(c.EconPasswords) < len(c.EconServers) {
+				c.EconPasswords = append(c.EconPasswords, c.EconPasswords[0])
+			}
+		}
+	}
+
+	options := redis.Options{
+		Addr:     c.RedisAddress,
+		Password: c.RedisPassword,
+		DB:       c.RedisDB,
+	}
+
+	redisClient := redis.NewClient(&options)
+	defer redisClient.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pong, err := redisClient.Ping(ctx).Result()
+	if err != nil || pong != "PONG" {
+		return fmt.Errorf("%w: %v", errRedisDatabaseNotFound, err)
+	}
+
+	return nil
 }
 
 // apis returns a list of available apis that is constructed based on the configuration
-func (c *Config) apis() []vpn.VPN {
+func (c *Config) APIs() []vpn.VPN {
 	apis := []vpn.VPN{}
 	if !c.Offline {
 		// share client with all apis
 		httpClient := &http.Client{}
 
-		if cfg.IPHubToken != "" {
-			apis = append(apis, vpn.NewIPHub(httpClient, cfg.IPHubToken))
+		if c.IPHubToken != "" {
+			apis = append(apis, vpn.NewIPHub(httpClient, c.IPHubToken))
 		}
 
-		if cfg.IpTeohEnabled {
+		if c.IPTeohEnabled {
 			apis = append(apis, vpn.NewIPTeohIO(httpClient))
 		}
 
-		if cfg.ProxyCheckToken != "" {
-			apis = append(apis, vpn.NewProxyCheck(httpClient, cfg.ProxyCheckToken))
+		if c.ProxyCheckToken != "" {
+			apis = append(apis, vpn.NewProxyCheck(httpClient, c.ProxyCheckToken))
 		}
 	}
 	return apis
-}
-
-func (c *Config) EconServerIPs() map[string]bool {
-	return c.uniqueIps
-}
-
-func (c *Config) Context() context.Context {
-	return c.ctx
-}
-
-func (c *Config) Checker() *VPNChecker {
-	return c.checker
-}
-
-func (c *Config) UpdateIPsTicker() *time.Ticker {
-	return time.NewTicker(c.ProxyUpdateInterval)
-}
-
-// Close should be called in your main function with a defer
-func Close() {
-	closeOnce.Do(func() {
-		_, err := configo.Unparse(cfg)
-		if err != nil {
-			log.Println(err)
-		}
-	})
 }

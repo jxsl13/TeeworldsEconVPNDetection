@@ -16,3 +16,6 @@ stop:
 build:
 	docker compose build --force-rm
 
+redis:
+	docker compose -f ./docker-compose.redis.yaml up -d
+

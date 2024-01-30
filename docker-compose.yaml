@@ -2,7 +2,6 @@ version: "2.4"
 
 
 services:
-  
   # key value store
   redis:
     env_file: .env
@@ -18,7 +17,7 @@ services:
       - ./volumes/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
       - ./volumes/redis/config:/usr/local/etc/redis
       - ./volumes/redis/data:/data
-  
+
   # monitor of teeworlds servers
   econ-vpn-detection:
     env_file: .env
@@ -42,16 +41,16 @@ services:
       ECON_ADDRESSES: ${ECON_ADDRESSES:?err}
       ECON_PASSWORDS: ${ECON_PASSWORDS:?err}
       REDIS_ADDRESS: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?err} 
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?err}
       # optional
-      OFFLINE: ${OFFLINE:?false} 
-      IPHUB_TOKEN: ${IPHUB_TOKEN:-} 
-      PROXYCHECK_TOKEN: ${PROXYCHECK_TOKEN:-} 
+      OFFLINE: ${OFFLINE:?false}
+      IPHUB_TOKEN: ${IPHUB_TOKEN:-}
+      PROXYCHECK_TOKEN: ${PROXYCHECK_TOKEN:-}
       IPTEOH_ENABLED: ${IPTEOH_ENABLED:-false}
       PERMABAN_THRESHOLD: ${PERMABAN_THRESHOLD:-0.6}
-      REDIS_DB_VPN: ${REDIS_DB_VPN:-0} 
-      VPN_BAN_REASON: ${VPN_BAN_REASON:-VPN} 
-      VPN_BAN_DURATION: ${VPN_BAN_DURATION:-1h} 
+      REDIS_DB_VPN: ${REDIS_DB_VPN:-0}
+      VPN_BAN_REASON: ${VPN_BAN_REASON:-VPN}
+      VPN_BAN_DURATION: ${VPN_BAN_DURATION:-1h}
       LOGGING_FORMAT: ${LOGGING_FORMAT:-Vanilla}
       PROXY_DETECTION_ENABLED: ${PROXY_DETECTION_ENABLED:-false}
       PROXY_UPDATE_INTERVAL: ${PROXY_UPDATE_INTERVAL:-1m}

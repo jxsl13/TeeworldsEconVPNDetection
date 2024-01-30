@@ -1,12 +1,12 @@
-package config
+package vpn
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net"
 
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
-	"github.com/jxsl13/goripr"
+	"github.com/jxsl13/goripr/v2"
 )
 
 // Valid is used to represent the answer of an api endpoint
@@ -20,8 +20,9 @@ type Valid struct {
 // either the caching information or based on the implemented api endpoints, whether
 // an ip is a vpn.
 type VPNChecker struct {
+	ctx       context.Context
 	r         *goripr.Client
-	Apis      []vpn.VPN
+	Apis      []VPN
 	Offline   bool
 	Threshold float64
 }
@@ -33,19 +34,19 @@ func (rdb *VPNChecker) Close() error {
 // newVPNChecker creates a new checker that can be asked for VPN IPs.
 // it connects to the redis database for caching and requests information from all existing
 // API endpoints that provode free VPN detections.
-func newVPNChecker(cfg *Config) *VPNChecker {
+func NewVPNChecker(ctx context.Context, ripr *goripr.Client, vpns []VPN, offline bool, permabanThreshold float64) *VPNChecker {
 	return &VPNChecker{
-		r:         cfg.ripr,
-		Apis:      cfg.apis(),
-		Offline:   cfg.Offline,
-		Threshold: cfg.PermaBanThreshold,
+		ctx:       ctx,
+		r:         ripr,
+		Apis:      vpns,
+		Offline:   offline,
+		Threshold: permabanThreshold,
 	}
 }
 
-//
 func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason string, err error) {
 
-	reason, err = rdb.r.Find(sIP)
+	reason, err = rdb.r.Find(rdb.ctx, sIP)
 	if errors.Is(goripr.ErrIPNotFound, err) {
 		return false, false, reason, nil
 	} else if err != nil {
@@ -90,8 +91,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	}
 	percentage := trueValue / total
 
-	IsVPN = percentage >= float64(rdb.Threshold)
-	return
+	return percentage >= float64(rdb.Threshold)
 }
 
 // IsVPN checks firstly in cache and then online.
@@ -127,7 +127,7 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 	// update cache values
 	if isOnlineVPN {
 		// forever vpn
-		e := rdb.r.Insert(IP, "VPN (f/o)")
+		e := rdb.r.Insert(rdb.ctx, IP, "VPN (f/o)")
 		if e != nil {
 			log.Println("[error]: failed to insert VPN IP found online: ", IP)
 		}

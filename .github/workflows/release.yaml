@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+
+jobs:
+    release-docker-image:
+      runs-on: ubuntu-latest
+      env:
+        REGISTRY: ghcr.io
+        IMAGE_NAME: ${{ github.repository }}
+      permissions:
+          contents: read
+          packages: write
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+    release-assets:
+      permissions:
+        contents: write
+      strategy:
+        matrix:
+          GOOS: ['linux', 'darwin', 'windows']
+          GOARCH: ['amd64', 'arm64']
+      runs-on: ubuntu-latest
+      env:
+        GOOS: ${{ matrix.GOOS }}
+        GOARCH: ${{ matrix.GOARCH }}
+        CGO_ENABLED: "0"
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Install Go
+          uses: actions/setup-go@v5
+          with:
+            go-version: stable
+
+        - name: Construct env variables
+          if: ${{ matrix.GOOS != 'windows' }}
+          run: echo "RELEASE_EXECUTABLE=${{ github.event.repository.name }}.${{ env.GOOS }}.${{ env.GOARCH }}" >> $GITHUB_ENV
+        - name: Construct env variables
+          if: ${{ matrix.GOOS == 'windows' }}
+          run: echo "RELEASE_EXECUTABLE=${{ github.event.repository.name }}.${{ env.GOOS }}.${{ env.GOARCH }}.exe" >> $GITHUB_ENV
+        - name: Build
+          run: go build -a -trimpath -o ${{ env.RELEASE_EXECUTABLE }} .
+        - name: Checksum
+          run: sha256sum ${{ env.RELEASE_EXECUTABLE }} > ${{ env.RELEASE_EXECUTABLE }}.sha256
+        - name: Release
+          uses: softprops/action-gh-release@v1
+          with:
+            files: |
+              ${{ env.RELEASE_EXECUTABLE }}
+              ${{ env.RELEASE_EXECUTABLE }}.sha256
+            prerelease: true
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
