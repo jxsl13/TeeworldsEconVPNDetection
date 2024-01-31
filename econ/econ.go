@@ -49,7 +49,7 @@ func vpnCheck(
 		_ = econ.WriteLine(fmt.Sprintf("ban %s %d %s", ip, minutes, reason))
 		log.Println(tag, ip, "(", reason, ")")
 	} else {
-		log.Println("[clean ip] :", ip)
+		log.Println("[clean ip]: ", ip)
 	}
 }
 
