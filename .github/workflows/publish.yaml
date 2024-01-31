@@ -16,6 +16,8 @@ on:
       - 'main'
     paths:
       - ".github/workflows/**"
+      - "**.mod"
+      - "**.sum"
       - "**.go"
       - "**.sql"
       - "Dockerfile**"
@@ -25,6 +27,8 @@ on:
       - 'main'
     paths:
       - ".github/workflows/**"
+      - "**.mod"
+      - "**.sum"
       - "**.go"
       - "**.sql"
       - "Dockerfile**"
