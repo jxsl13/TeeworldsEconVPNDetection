@@ -24,8 +24,8 @@ func NewRootCmd() *cobra.Command {
 
 	// cmd represents the run command
 	cmd := &cobra.Command{
-		Use:          "TeeworldsEconVPNDetectionGo",
-		Short:        "TeeworldsEconVPNDetectionGo is a tool for detecting and banning VPN user on a Teeworlds server.",
+		Use:          "TeeworldsEconVPNDetection",
+		Short:        "TeeworldsEconVPNDetection is a tool for detecting and banning VPN user on a Teeworlds server.",
 		SilenceUsage: true,
 		RunE:         rootContext.RunE,
 		Args:         cobra.ExactArgs(0),

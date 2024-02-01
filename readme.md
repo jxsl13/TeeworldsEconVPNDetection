@@ -54,7 +54,7 @@ Use `sample.env` as reference or check out the help of the application.
 
 Run the econ log parser with the VPN detection.
 ```shell
-$ ./TeeworldsEconVPNDetectionGo --help
+$ ./TeeworldsEconVPNDetection --help
 Environment variables:
   TWVPN_IPHUB_TOKEN            api key for iphub.info
   TWVPN_PROXYCHECK_TOKEN       api key for proxycheck.io
@@ -74,8 +74,8 @@ Environment variables:
   TWVPN_IP_BLACKLIST           comma separated list of ip ranges to blacklist
 
 Usage:
-  TeeworldsEconVPNDetectionGo [flags]
-  TeeworldsEconVPNDetectionGo [command]
+  TeeworldsEconVPNDetection [flags]
+  TeeworldsEconVPNDetection [command]
 
 Available Commands:
   add         add ips to the database (blacklist)
@@ -87,7 +87,7 @@ Flags:
   -c, --config string                .env config file path (or via env variable TWVPN_CONFIG)
       --econ-addresses string        comma separated list of econ addresses
       --econ-passwords string        comma separated list of econ passwords
-  -h, --help                         help for TeeworldsEconVPNDetectionGo
+  -h, --help                         help for TeeworldsEconVPNDetection
       --ip-blacklist string          comma separated list of ip ranges to blacklist
       --ip-whitelist string          comma separated list of ip ranges to whitelist
       --iphub-token string           api key for iphub.info
@@ -103,19 +103,19 @@ Flags:
       --vpn-ban-duration duration     (default 5m0s)
       --vpn-ban-reason string         (default "VPN")
 
-Use "TeeworldsEconVPNDetectionGo [command] --help" for more information about a command.
+Use "TeeworldsEconVPNDetection [command] --help" for more information about a command.
 ```
 
 Add ips to the database (blacklist)
 ```shell
-$ ./TeeworldsEconVPNDetectionGo add --help
+$ ./TeeworldsEconVPNDetection add --help
 Environment variables:
   TWVPN_REDIS_ADDRESS      (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD
   TWVPN_REDIS_DB_VPN       (default: "15")
 
 Usage:
-  TeeworldsEconVPNDetectionGo add blacklist.txt [more-banlists.txt...] [flags]
+  TeeworldsEconVPNDetection add blacklist.txt [more-banlists.txt...] [flags]
 
 Flags:
   -c, --config string           .env config file path (or via env variable TWVPN_CONFIG)
@@ -127,14 +127,14 @@ Flags:
 
 Remove ips from the database (whitelist)
 ```shell
-$ ./TeeworldsEconVPNDetectionGo remove --help
+$ ./TeeworldsEconVPNDetection remove --help
 Environment variables:
   TWVPN_REDIS_ADDRESS      (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD
   TWVPN_REDIS_DB_VPN       (default: "15")
 
 Usage:
-  TeeworldsEconVPNDetectionGo remove whitelist.txt [more-whitelists.txt...] [flags]
+  TeeworldsEconVPNDetection remove whitelist.txt [more-whitelists.txt...] [flags]
 
 Flags:
   -c, --config string           .env config file path (or via env variable TWVPN_CONFIG)
