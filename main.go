@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/cmd"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/cmd"
 )
 
 func main() {

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/vpn"
 	"github.com/jxsl13/twapi/econ"
 )
 

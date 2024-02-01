@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/config"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/config"
 	"github.com/jxsl13/goripr/v2"
 	"github.com/spf13/cobra"
 )

@@ -1,4 +1,4 @@
-module github.com/jxsl13/TeeworldsEconVPNDetectionGo
+module github.com/jxsl13/TeeworldsEconVPNDetection
 
 go 1.21.6
 

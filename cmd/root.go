@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/config"
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/econ"
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/config"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/econ"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/vpn"
 	"github.com/jxsl13/goripr/v2"
 	"github.com/spf13/cobra"
 )

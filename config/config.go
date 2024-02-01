@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/jxsl13/TeeworldsEconVPNDetectionGo/vpn"
+	"github.com/jxsl13/TeeworldsEconVPNDetection/vpn"
 	"github.com/redis/go-redis/v9"
 )
 
