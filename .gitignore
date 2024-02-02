@@ -8,3 +8,4 @@ __debug_bin*
 !sample.env
 *.env
 volumes/*
+nutsdata/*

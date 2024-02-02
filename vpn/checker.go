@@ -21,11 +21,14 @@ type Valid struct {
 // either the caching information or based on the implemented api endpoints, whether
 // an ip is a vpn.
 type VPNChecker struct {
-	ctx       context.Context
-	r         *goripr.Client
-	Apis      []VPN
-	Offline   bool
-	Threshold float64
+	ctx context.Context
+	r   *goripr.Client
+
+	apis      []VPN
+	offline   bool
+	threshold float64
+
+	wl *Whitelister
 }
 
 func (rdb *VPNChecker) Close() error {
@@ -35,13 +38,21 @@ func (rdb *VPNChecker) Close() error {
 // newVPNChecker creates a new checker that can be asked for VPN IPs.
 // it connects to the redis database for caching and requests information from all existing
 // API endpoints that provode free VPN detections.
-func NewVPNChecker(ctx context.Context, ripr *goripr.Client, vpns []VPN, offline bool, permabanThreshold float64) *VPNChecker {
+func NewVPNChecker(
+	ctx context.Context,
+	ripr *goripr.Client,
+	wl *Whitelister,
+	vpns []VPN,
+	offline bool,
+	permabanThreshold float64,
+) *VPNChecker {
 	return &VPNChecker{
 		ctx:       ctx,
 		r:         ripr,
-		Apis:      vpns,
-		Offline:   offline,
-		Threshold: permabanThreshold,
+		apis:      vpns,
+		offline:   offline,
+		threshold: permabanThreshold,
+		wl:        wl,
 	}
 }
 
@@ -59,9 +70,9 @@ func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason 
 
 func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 
-	results := make([]Valid, len(rdb.Apis))
+	results := make([]Valid, len(rdb.apis))
 
-	for idx, api := range rdb.Apis {
+	for idx, api := range rdb.apis {
 
 		isVPNTmp, err := api.IsVPN(sIP)
 		if err != nil {
@@ -97,7 +108,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	}
 	percentage := trueValue / total
 
-	return percentage >= float64(rdb.Threshold)
+	return percentage >= float64(rdb.threshold)
 }
 
 // IsVPN checks firstly in cache and then online.
@@ -105,10 +116,10 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 
 	ip, err := netip.ParseAddr(sIP)
 	if err != nil {
-		return false, "", fmt.Errorf("invalid IP passed: %w", err)
+		return false, "", fmt.Errorf("invalid IP passed: %s: %w", sIP, err)
 	}
 	if !ip.Is4() {
-		return false, "", errors.New("invalid IP passed, expected IPv4")
+		return false, "", fmt.Errorf("invalid IP passed, expected IPv4, got: %s", sIP)
 	}
 
 	IPStr := ip.String()
@@ -126,12 +137,25 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 	log.Println("[not in cache]: ", IPStr)
 
 	// not found, lookup online
-	if rdb.Offline {
-		log.Println("[skipping online check]: ", IPStr)
+	if rdb.offline {
+		log.Println("[skipping online check]:", IPStr)
 		// if the detection is offline, cache only,
 		// caching of default no values makes no sense, so no caching here.
 		return false, "", nil
 	}
+
+	// found nuts?
+	found, err = rdb.wl.Exists(IPStr)
+	if err != nil {
+		log.Printf("[error]: %v", err)
+		return false, "", err
+	}
+
+	if found {
+		log.Println("[whitelisted]: ", IPStr)
+		return false, "", nil
+	}
+	log.Println("[not whitelisted]: ", IPStr)
 
 	isOnlineVPN := rdb.foundOnline(IPStr)
 	log.Printf("[online]:  %s\n", IPStr)
@@ -140,9 +164,16 @@ func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 		// forever vpn
 		e := rdb.r.Insert(rdb.ctx, IPStr, "VPN (f/o)")
 		if e != nil {
-			log.Println("[error]: failed to insert VPN IP found online: ", IPStr)
+			log.Printf("[error]: failed to insert VPN IP found online: %s: %v", IPStr, e)
+		}
+	} else {
+		// not vpn, cache in whitelist
+		e := rdb.wl.Whitelist(IPStr)
+		if e != nil {
+			log.Printf("[error]: %v", e)
 		}
 	}
+
 	// else case, not found online
 	return isOnlineVPN, "", nil // reason 1 -> VPN
 }

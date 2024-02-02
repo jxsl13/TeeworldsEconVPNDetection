@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	"github.com/jxsl13/TeeworldsEconVPNDetection/econ"
 	"github.com/jxsl13/TeeworldsEconVPNDetection/vpn"
 	"github.com/jxsl13/goripr/v2"
+	"github.com/nutsdb/nutsdb"
 	"github.com/spf13/cobra"
 )
 
@@ -79,9 +81,37 @@ func (c *rootContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, args 
 
 		c.Ripr = ripr
 
+		var wl *vpn.Whitelister
+		bucket := c.Config.NutsDBBucket
+		if !c.Config.Offline {
+			// only needed for whitelisting non-vpn users
+			nuts, err := nutsdb.Open(
+				nutsdb.DefaultOptions,
+				nutsdb.WithRWMode(nutsdb.MMap),
+				nutsdb.WithDir(c.Config.NutsDBDir),
+				nutsdb.WithSegmentSize(1024*1024), // 1MB
+			)
+			if err != nil {
+				return err
+			}
+
+			err = nuts.Update(func(tx *nutsdb.Tx) error {
+				if !tx.ExistBucket(nutsdb.DataStructureBTree, bucket) {
+					return tx.NewKVBucket(bucket)
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create bucket: %w", err)
+			}
+
+			wl = vpn.NewWhitelister(nuts, bucket, c.Config.WhitelistTTL)
+		}
+
 		checker := vpn.NewVPNChecker(
 			c.Ctx,
 			ripr,
+			wl,
 			c.Config.APIs(),
 			c.Config.Offline,
 			c.Config.BanThreshold,

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,9 +25,20 @@ var (
 // any call after the first one will return the config of the first call
 // the location of the .env file can be changed via the DefaultEnvFile variable
 func New() *Config {
+	pwd := "./"
+	dir, err := os.Getwd()
+	if err == nil {
+		pwd = dir
+	}
+	nutsDir := filepath.Join(pwd, "nutsdata")
+
 	return &Config{
-		RedisAddress:     "localhost:6379",
-		RedisDB:          15,
+		RedisAddress: "localhost:6379",
+		RedisDB:      15,
+		NutsDBDir:    nutsDir,
+		NutsDBBucket: "whitelist",
+		WhitelistTTL: 7 * 24 * time.Hour,
+
 		ReconnectDelay:   10 * time.Second,
 		ReconnectTimeout: 24 * time.Hour,
 		VPNBanReason:     "VPN",
@@ -43,6 +56,10 @@ type Config struct {
 	RedisAddress  string `koanf:"redis.address" validate:"required"`
 	RedisPassword string `koanf:"redis.password" description:"optional password for the redis database"`
 	RedisDB       int    `koanf:"redis.db.vpn" validate:"gte=0,lte=15" description:"redis database to use for the vpn ip data (0-15)"`
+
+	NutsDBDir    string        `koanf:"nutsdb.dir" validate:"required" description:"directory to store the nutsdb database"`
+	NutsDBBucket string        `koanf:"nutsdb.bucket" validate:"required" description:"bucket name for the nutsdb key value database"`
+	WhitelistTTL time.Duration `koanf:"whitelist.ttl" validate:"required" description:"time to live for whitelisted ips"`
 
 	EconServersString string `koanf:"econ.addresses" validate:"required" description:"comma separated list of econ addresses"`
 	EconServers       []string
@@ -101,6 +118,10 @@ func (c *Config) Validate() error {
 	pong, err := redisClient.Ping(ctx).Result()
 	if err != nil || pong != "PONG" {
 		return fmt.Errorf("%w: %v", errRedisDatabaseNotFound, err)
+	}
+
+	if c.WhitelistTTL < time.Second {
+		return errors.New("whitelist ttl must be at least 1 second")
 	}
 
 	return nil
