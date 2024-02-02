@@ -62,6 +62,9 @@ Environment variables:
   TWVPN_REDIS_ADDRESS           (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD         optional password for the redis database
   TWVPN_REDIS_DB_VPN           redis database to use for the vpn ip data (0-15) (default: "15")
+  TWVPN_NUTSDB_DIR             directory to store the nutsdb database (default: "/Users/john/Desktop/Development/TeeworldsEconVPNDetectionGo/nutsdata")
+  TWVPN_NUTSDB_BUCKET          bucket name for the nutsdb key value database (default: "whitelist")
+  TWVPN_WHITELIST_TTL          time to live for whitelisted ips (default: "168h0m0s")
   TWVPN_ECON_ADDRESSES         comma separated list of econ addresses
   TWVPN_ECON_PASSWORDS         comma separated list of econ passwords
   TWVPN_RECONNECT_DELAY         (default: "10s")
@@ -91,6 +94,8 @@ Flags:
       --ip-blacklist string          comma separated list of ip ranges to blacklist
       --ip-whitelist string          comma separated list of ip ranges to whitelist
       --iphub-token string           api key for https://iphub.info
+      --nutsdb-bucket string         bucket name for the nutsdb key value database (default "whitelist")
+      --nutsdb-dir string            directory to store the nutsdb database (default "/Users/john/Desktop/Development/TeeworldsEconVPNDetectionGo/nutsdata")
       --offline                       if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)
       --perma-ban-threshold float     (default 0.6)
       --proxycheck-token string      api key for https://proxycheck.io
@@ -102,6 +107,7 @@ Flags:
       --vpn-ban-duration duration     (default 5m0s)
       --vpn-ban-reason string         (default "VPN")
       --vpnapi-token string          api key for https://vpnapi.io
+      --whitelist-ttl duration       time to live for whitelisted ips (default 168h0m0s)
 
 Use "TeeworldsEconVPNDetection [command] --help" for more information about a command.
 ```
