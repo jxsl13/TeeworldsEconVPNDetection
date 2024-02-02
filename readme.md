@@ -56,9 +56,9 @@ Run the econ log parser with the VPN detection.
 ```shell
 $ ./TeeworldsEconVPNDetection --help
 Environment variables:
-  TWVPN_IPHUB_TOKEN            api key for iphub.info
-  TWVPN_PROXYCHECK_TOKEN       api key for proxycheck.io
-  TWVPN_IPTEOH_ENABLED          (default: "false")
+  TWVPN_IPHUB_TOKEN            api key for https://iphub.info
+  TWVPN_PROXYCHECK_TOKEN       api key for https://proxycheck.io
+  TWVPN_VPNAPI_TOKEN           api key for https://vpnapi.io
   TWVPN_REDIS_ADDRESS           (default: "localhost:6379")
   TWVPN_REDIS_PASSWORD         optional password for the redis database
   TWVPN_REDIS_DB_VPN           redis database to use for the vpn ip data (0-15) (default: "15")
@@ -90,11 +90,10 @@ Flags:
   -h, --help                         help for TeeworldsEconVPNDetection
       --ip-blacklist string          comma separated list of ip ranges to blacklist
       --ip-whitelist string          comma separated list of ip ranges to whitelist
-      --iphub-token string           api key for iphub.info
-      --ipteoh-enabled
+      --iphub-token string           api key for https://iphub.info
       --offline                       if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)
       --perma-ban-threshold float     (default 0.6)
-      --proxycheck-token string      api key for proxycheck.io
+      --proxycheck-token string      api key for https://proxycheck.io
       --reconnect-delay duration      (default 10s)
       --reconnect-timeout duration    (default 24h0m0s)
       --redis-address string          (default "localhost:6379")
@@ -102,6 +101,7 @@ Flags:
       --redis-password string        optional password for the redis database
       --vpn-ban-duration duration     (default 5m0s)
       --vpn-ban-reason string         (default "VPN")
+      --vpnapi-token string          api key for https://vpnapi.io
 
 Use "TeeworldsEconVPNDetection [command] --help" for more information about a command.
 ```
