@@ -24,7 +24,6 @@ var (
 // the location of the .env file can be changed via the DefaultEnvFile variable
 func New() *Config {
 	return &Config{
-		IPTeohEnabled:    false,
 		RedisAddress:     "localhost:6379",
 		RedisDB:          15,
 		ReconnectDelay:   10 * time.Second,
@@ -37,9 +36,9 @@ func New() *Config {
 
 // Config represents the application configuration
 type Config struct {
-	IPHubToken      string `koanf:"iphub.token" description:"api key for iphub.info"`
-	ProxyCheckToken string `koanf:"proxycheck.token" description:"api key for proxycheck.io"`
-	IPTeohEnabled   bool   `koanf:"ipteoh.enabled"`
+	IPHubToken      string `koanf:"iphub.token" description:"api key for https://iphub.info"`
+	ProxyCheckToken string `koanf:"proxycheck.token" description:"api key for https://proxycheck.io"`
+	VPNApiToken     string `koanf:"vpnapi.token" description:"api key for https://vpnapi.io"`
 
 	RedisAddress  string `koanf:"redis.address" validate:"required"`
 	RedisPassword string `koanf:"redis.password" description:"optional password for the redis database"`
@@ -112,14 +111,15 @@ func (c *Config) APIs() []vpn.VPN {
 	apis := []vpn.VPN{}
 	if !c.Offline {
 		// share client with all apis
+		// client reuses tls connections
 		httpClient := &http.Client{}
 
 		if c.IPHubToken != "" {
 			apis = append(apis, vpn.NewIPHub(httpClient, c.IPHubToken))
 		}
 
-		if c.IPTeohEnabled {
-			apis = append(apis, vpn.NewIPTeohIO(httpClient))
+		if c.VPNApiToken != "" {
+			apis = append(apis, vpn.NewVPNAPI(httpClient, c.VPNApiToken))
 		}
 
 		if c.ProxyCheckToken != "" {

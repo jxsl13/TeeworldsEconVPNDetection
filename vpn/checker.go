@@ -3,8 +3,9 @@ package vpn
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
-	"net"
+	"net/netip"
 
 	"github.com/jxsl13/goripr/v2"
 )
@@ -12,7 +13,7 @@ import (
 // Valid is used to represent the answer of an api endpoint
 type Valid struct {
 	IsValid bool
-	Value   bool
+	IsVPN   bool
 }
 
 // VPNChecker encapsulates the redis database as cache and the
@@ -47,7 +48,7 @@ func NewVPNChecker(ctx context.Context, ripr *goripr.Client, vpns []VPN, offline
 func (rdb *VPNChecker) foundInCache(sIP string) (found bool, isVPN bool, reason string, err error) {
 
 	reason, err = rdb.r.Find(rdb.ctx, sIP)
-	if errors.Is(goripr.ErrIPNotFound, err) {
+	if errors.Is(err, goripr.ErrIPNotFound) {
 		return false, false, reason, nil
 	} else if err != nil {
 		return false, false, "", err
@@ -63,14 +64,19 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	for idx, api := range rdb.Apis {
 
 		isVPNTmp, err := api.IsVPN(sIP)
-
 		if err != nil {
 			log.Println("[ERROR]:", api.String(), ":", err.Error())
-			results[idx] = Valid{false, false}
+			results[idx] = Valid{
+				IsValid: false,
+				IsVPN:   false,
+			}
 			continue
 		}
 
-		results[idx] = Valid{true, isVPNTmp}
+		results[idx] = Valid{
+			IsValid: true,
+			IsVPN:   isVPNTmp,
+		}
 	}
 
 	total := 0.0
@@ -78,7 +84,7 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 	for _, valid := range results {
 		if valid.IsValid {
 			total += 1.0
-			if valid.Value {
+			if valid.IsVPN {
 				trueValue += 1.0
 			}
 		}
@@ -97,39 +103,44 @@ func (rdb *VPNChecker) foundOnline(sIP string) (IsVPN bool) {
 // IsVPN checks firstly in cache and then online.
 func (rdb *VPNChecker) IsVPN(sIP string) (bool, string, error) {
 
-	IP := net.ParseIP(sIP).To4().String()
-	if IP == "<nil>" {
+	ip, err := netip.ParseAddr(sIP)
+	if err != nil {
+		return false, "", fmt.Errorf("invalid IP passed: %w", err)
+	}
+	if !ip.Is4() {
 		return false, "", errors.New("invalid IP passed, expected IPv4")
 	}
 
-	found, isVPN, reason, err := rdb.foundInCache(IP)
+	IPStr := ip.String()
+
+	found, isVPN, reason, err := rdb.foundInCache(IPStr)
 	if err != nil {
 		return false, "", err
 	}
 
 	if found {
-		log.Println("[in cache]: ", IP)
+		log.Println("[in cache]: ", IPStr)
 		return isVPN, reason, nil
-	} else {
-		log.Println("[not in cache]: ", IP)
 	}
+
+	log.Println("[not in cache]: ", IPStr)
 
 	// not found, lookup online
 	if rdb.Offline {
-		log.Println("[skipping online check]: ", IP)
+		log.Println("[skipping online check]: ", IPStr)
 		// if the detection is offline, cache only,
 		// caching of default no values makes no sense, so no caching here.
 		return false, "", nil
 	}
 
-	isOnlineVPN := rdb.foundOnline(IP)
-	log.Printf("[online]:  %s\n", IP)
+	isOnlineVPN := rdb.foundOnline(IPStr)
+	log.Printf("[online]:  %s\n", IPStr)
 	// update cache values
 	if isOnlineVPN {
 		// forever vpn
-		e := rdb.r.Insert(rdb.ctx, IP, "VPN (f/o)")
+		e := rdb.r.Insert(rdb.ctx, IPStr, "VPN (f/o)")
 		if e != nil {
-			log.Println("[error]: failed to insert VPN IP found online: ", IP)
+			log.Println("[error]: failed to insert VPN IP found online: ", IPStr)
 		}
 	}
 	// else case, not found online
