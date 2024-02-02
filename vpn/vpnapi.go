@@ -36,12 +36,6 @@ func (it VPNAPI) String() string {
 	return "vpnapi.io"
 }
 
-// This file was generated from JSON Schema using quicktype, do not modify it directly.
-// To parse and unparse this JSON data, add this code to your project and do:
-//
-//    welcome, err := UnmarshalWelcome(bytes)
-//    bytes, err = welcome.Marshal()
-
 type vpnAPIResponse struct {
 	Security Security `json:"security"`
 }
