@@ -12,6 +12,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var _ VPN = (*ProxyCheck)(nil)
+
 // NewProxyCheck reates a new api that can be checked for VPN IPs
 func NewProxyCheck(c *http.Client, apikey string) *ProxyCheck {
 	return &ProxyCheck{

@@ -11,6 +11,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var _ VPN = (*IPHub)(nil)
+
 // NewIPHub reates a new api that can be checked for VPN IPs
 func NewIPHub(c *http.Client, apikey string) *IPHub {
 	return &IPHub{

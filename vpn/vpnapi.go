@@ -13,6 +13,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var _ VPN = (*VPNAPI)(nil)
+
 // NewVPNAPI creates a new api endpoint that can check IPs for whether they are VPNs or not.
 func NewVPNAPI(c *http.Client, apiKey string) *VPNAPI {
 	return &VPNAPI{
