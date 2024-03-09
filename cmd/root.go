@@ -125,12 +125,12 @@ func (c *rootContext) PreRunE(cmd *cobra.Command) func(cmd *cobra.Command, args 
 func (c *rootContext) RunE(cmd *cobra.Command, args []string) error {
 	log.Println("Starting up...")
 
-	for _, file := range c.Config.Whitelists {
+	for _, file := range c.Config.Blacklists {
 		file = strings.TrimSpace(file)
 		if file == "" {
 			continue
 		}
-		log.Println("Adding whitelist file: ", file)
+		log.Println("Adding blacklist file: ", file)
 		added, err := parseFileAndAddIPsToCache(c.Ctx, c.Ripr, file)
 		if err != nil {
 			return err
@@ -138,12 +138,12 @@ func (c *rootContext) RunE(cmd *cobra.Command, args []string) error {
 		log.Printf("Added %d ip ranges from %s\n", added, file)
 	}
 
-	for _, file := range c.Config.Blacklists {
+	for _, file := range c.Config.Whitelists {
 		file = strings.TrimSpace(file)
 		if file == "" {
 			continue
 		}
-		log.Println("Removing blacklist file: ", file)
+		log.Println("Removing whitelist file: ", file)
 		removed, err := parseFileAndRemoveIPsFromCache(c.Ctx, c.Ripr, file)
 		if err != nil {
 			return err

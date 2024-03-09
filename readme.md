@@ -7,15 +7,35 @@ The joining player's IP is then compared to the redis cache.
 Does the cache not contain the IP, currently three VPN detection APIs are used to determine whether the player's IP is a VPN or not.
 60% of these three APIs need to detect the IP as VPN in order for the application to actually ban the player and cache his VPN IP in the redis cache as such.
 
-## Requirements
+## Usage
 
-### Docker
+If you have some predefined lists of VPN IPs, you may use `TeeworldsEconVPNDetection add` to add them to the redis database.
+The same goes for whitelisted IPs with `TeeworldsEconVPNDetection remove`.
+If multiple VPN detection APIs still decide to flag a player's ip, then there is no whitelisting that can save him from being banned.
 
+You may use either docker to run the application by providing a `.env` file with the following value:
+```dotenv
+TWVPN_ECON_ADDRESSES=localhost:8404,localhost:8405
+TWVPN_ECON_PASSWORDS="single password for all servers or comma separated list of passwords for each server"
+TWVPN_REDIS_PASSWORD="your database password"
+
+TWVPN_WHITELIST_TTL=168h30m30s
+TWVPN_REDIS_DB_VPN=0 # 0-15
+TWVPN_OFFLINE=false
+TWVPN_IPHUB_TOKEN="N..."
+TWVPN_PROXYCHECK_TOKEN="12345-1234-12345-123456"
+TWVPN_VPNAPI_TOKEN="123456890abcdef"
+TWVPN_PERMABAN_THRESHOLD="0.6"
+
+TWVPN_VPN_BAN_REASON="VPN"
+TWVPN_VPN_BAN_DURATION="24h30m30s"
 ```
-make start
+And then start your containers using `make start` and stop them using `make stop`.
 
-makes stop
-```
+Alternatively, you may compile the application using the Go toolchain `go build .` and run the application by using more or less the exact same `.env` file as for docker and start the application with `./TeeworldsEconVPNDetection --config ./.env`.
+
+You can also set up your redis database using docker with the provided `docker-compose.yml` file or just execute `make redis`.
+
 
 ### Redis server for caching of IPs
 
@@ -46,35 +66,32 @@ brew install redis
 go build .
 ```
 
-## Running
+## Command documentation
+These are all of the available commands, subcommands and configuration parameters ofthe application.
 
-You may use a `.env` config file for configuring the application.
-Use `sample.env` as reference or check out the help of the application.
-
-
-Run the econ log parser with the VPN detection.
+### Run the econ log parser with the VPN detection.
 ```shell
 $ ./TeeworldsEconVPNDetection --help
 Environment variables:
-  TWVPN_IPHUB_TOKEN            api key for https://iphub.info
-  TWVPN_PROXYCHECK_TOKEN       api key for https://proxycheck.io
-  TWVPN_VPNAPI_TOKEN           api key for https://vpnapi.io
-  TWVPN_REDIS_ADDRESS           (default: "localhost:6379")
-  TWVPN_REDIS_PASSWORD         optional password for the redis database
-  TWVPN_REDIS_DB_VPN           redis database to use for the vpn ip data (0-15) (default: "15")
-  TWVPN_NUTSDB_DIR             directory to store the nutsdb database (default: "/Users/john/Desktop/Development/TeeworldsEconVPNDetectionGo/nutsdata")
-  TWVPN_NUTSDB_BUCKET          bucket name for the nutsdb key value database (default: "whitelist")
-  TWVPN_WHITELIST_TTL          time to live for whitelisted ips (default: "168h0m0s")
-  TWVPN_ECON_ADDRESSES         comma separated list of econ addresses
-  TWVPN_ECON_PASSWORDS         comma separated list of econ passwords
-  TWVPN_RECONNECT_DELAY         (default: "10s")
-  TWVPN_RECONNECT_TIMEOUT       (default: "24h0m0s")
-  TWVPN_VPN_BAN_DURATION        (default: "5m0s")
-  TWVPN_VPN_BAN_REASON          (default: "VPN")
-  TWVPN_OFFLINE                 if set to true no api calls will be made if an ip was not found in the database (= distributed ban server) (default: "false")
-  TWVPN_PERMA_BAN_THRESHOLD     (default: "0.6")
-  TWVPN_IP_WHITELIST           comma separated list of ip ranges to whitelist
-  TWVPN_IP_BLACKLIST           comma separated list of ip ranges to blacklist
+  TWVPN_IPHUB_TOKEN           api key for https://iphub.info
+  TWVPN_PROXYCHECK_TOKEN      api key for https://proxycheck.io
+  TWVPN_VPNAPI_TOKEN          api key for https://vpnapi.io
+  TWVPN_REDIS_ADDRESS          (default: "localhost:6379")
+  TWVPN_REDIS_PASSWORD        optional password for the redis database
+  TWVPN_REDIS_DB_VPN          redis database to use for the vpn ip data (0-15) (default: "15")
+  TWVPN_NUTSDB_DIR            directory to store the nutsdb database (default: "./nutsdata")
+  TWVPN_NUTSDB_BUCKET         bucket name for the nutsdb key value database (default: "whitelist")
+  TWVPN_WHITELIST_TTL         time to live for whitelisted ips (default: "168h0m0s")
+  TWVPN_ECON_ADDRESSES        comma separated list of econ addresses
+  TWVPN_ECON_PASSWORDS        comma separated list of econ passwords
+  TWVPN_RECONNECT_DELAY        (default: "10s")
+  TWVPN_RECONNECT_TIMEOUT      (default: "24h0m0s")
+  TWVPN_VPN_BAN_DURATION       (default: "5m0s")
+  TWVPN_VPN_BAN_REASON         (default: "VPN")
+  TWVPN_OFFLINE                if set to true no api calls will be made if an ip was not found in the database (= distributed ban server) (default: "false")
+  TWVPN_PERMABAN_THRESHOLD    how many percent of the apis must agree on the vpn status for the IP to be added permanently to the blacklist (default: "0.6")
+  TWVPN_IP_WHITELIST          comma separated list of files to whitelist
+  TWVPN_IP_BLACKLIST          comma separated list of files to blacklist
 
 Usage:
   TeeworldsEconVPNDetection [flags]
@@ -91,13 +108,13 @@ Flags:
       --econ-addresses string        comma separated list of econ addresses
       --econ-passwords string        comma separated list of econ passwords
   -h, --help                         help for TeeworldsEconVPNDetection
-      --ip-blacklist string          comma separated list of ip ranges to blacklist
-      --ip-whitelist string          comma separated list of ip ranges to whitelist
+      --ip-blacklist string          comma separated list of files to blacklist
+      --ip-whitelist string          comma separated list of files to whitelist
       --iphub-token string           api key for https://iphub.info
       --nutsdb-bucket string         bucket name for the nutsdb key value database (default "whitelist")
-      --nutsdb-dir string            directory to store the nutsdb database (default "/Users/john/Desktop/Development/TeeworldsEconVPNDetectionGo/nutsdata")
+      --nutsdb-dir string            directory to store the nutsdb database (default "./nutsdata")
       --offline                       if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)
-      --perma-ban-threshold float     (default 0.6)
+      --permaban-threshold float     how many percent of the apis must agree on the vpn status for the IP to be added permanently to the blacklist (default 0.6)
       --proxycheck-token string      api key for https://proxycheck.io
       --reconnect-delay duration      (default 10s)
       --reconnect-timeout duration    (default 24h0m0s)
@@ -112,7 +129,7 @@ Flags:
 Use "TeeworldsEconVPNDetection [command] --help" for more information about a command.
 ```
 
-Add ips to the database (blacklist)
+### Add ips to the database (blacklist)
 ```shell
 $ ./TeeworldsEconVPNDetection add --help
 Environment variables:
@@ -131,7 +148,7 @@ Flags:
       --redis-password string
 ```
 
-Remove ips from the database (whitelist)
+### Remove ips from the database (whitelist)
 ```shell
 $ ./TeeworldsEconVPNDetection remove --help
 Environment variables:
@@ -189,3 +206,14 @@ Add a `# ban reason` behind the IP or behind the IP range to add a custom ban re
 The Teeworlds server banned you for attempting to login too any times or for connecting too often.
 Possible solution is to restart the game server.
 This should not be an issue, as the detector attempts to reconnect to the server.
+
+### TODO:
+
+Add proxy detection (if of a different currently running server)
+```dotenv
+PROXY_DETECTION_ENABLED=false
+PROXY_UPDATE_INTERVAL=1m
+PROXY_BAN_REASON="proxy connection"
+PROXY_BAN_DURATION=24h
+PROXY_SERVERNAME_DISTANCE=8
+```

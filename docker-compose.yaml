@@ -26,9 +26,9 @@ services:
     #build: . # uncomment if you want to build the image yourself
     restart: unless-stopped
     command:
-      - --add
+      - --ip-blacklist
       - /data/blacklists/blacklist.txt
-      - --remove
+      - --ip-whitelist
       - /data/whitelists/whitelist.txt
     volumes:
     - ./volumes/vpn-detection/blacklists/blacklist.txt:/data/blacklists/blacklist.txt
@@ -45,12 +45,13 @@ services:
       TWVPN_REDIS_PASSWORD: ${TWVPN_REDIS_PASSWORD:?err}
       # optional
       TWVPN_IPHUB_TOKEN: ${TWVPN_IPHUB_TOKEN:-}
-      TWVPN_IPTEOH_ENABLED: ${TWVPN_IPTEOH_ENABLED:-false}
-      TWVPN_OFFLINE: ${TWVPN_OFFLINE:?false}
-      TWVPN_PERMA_BAN_THRESHOLD: ${TWVPN_PERMA_BAN_THRESHOLD:-0.6}
       TWVPN_PROXYCHECK_TOKEN: ${TWVPN_PROXYCHECK_TOKEN:-}
+      TWVPN_VPNAPI_TOKEN: ${TWVPN_VPNAPI_TOKEN:-}
+      TWVPN_OFFLINE: ${TWVPN_OFFLINE:?false}
+      TWVPN_PERMABAN_THRESHOLD: ${TWVPN_PERMABAN_THRESHOLD:-0.6}
+
       TWVPN_REDIS_DB_VPN: ${TWVPN_REDIS_DB_VPN:-0}
-      TWVPN_VPN_BAN_DURATION: ${TWVPN_VPN_BAN_DURATION:-1h}
+      TWVPN_VPN_BAN_DURATION: ${TWVPN_VPN_BAN_DURATION:-24h}
       TWVPN_VPN_BAN_REASON: ${TWVPN_VPN_BAN_REASON:-VPN}
 
 networks:

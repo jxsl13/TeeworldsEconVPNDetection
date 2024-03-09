@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,17 +23,10 @@ var (
 // any call after the first one will return the config of the first call
 // the location of the .env file can be changed via the DefaultEnvFile variable
 func New() *Config {
-	pwd := "./"
-	dir, err := os.Getwd()
-	if err == nil {
-		pwd = dir
-	}
-	nutsDir := filepath.Join(pwd, "nutsdata")
-
 	return &Config{
 		RedisAddress: "localhost:6379",
 		RedisDB:      15,
-		NutsDBDir:    nutsDir,
+		NutsDBDir:    "./nutsdata",
 		NutsDBBucket: "whitelist",
 		WhitelistTTL: 7 * 24 * time.Hour,
 
@@ -72,10 +63,10 @@ type Config struct {
 	VPNBanReason        string        `koanf:"vpn.ban.reason" validate:"required"`
 	Offline             bool          `koanf:"offline" description:" if set to true no api calls will be made if an ip was not found in the database (= distributed ban server)"`
 
-	BanThreshold float64 `koanf:"perma.ban.threshold" validate:"required"`
+	BanThreshold float64 `koanf:"permaban.threshold" validate:"required" description:"how many percent of the apis must agree on the vpn status for the IP to be added permanently to the blacklist"`
 
-	Whitelist string `koanf:"ip.whitelist" description:"comma separated list of ip ranges to whitelist"`
-	Blacklist string `koanf:"ip.blacklist" description:"comma separated list of ip ranges to blacklist"`
+	Whitelist string `koanf:"ip.whitelist" description:"comma separated list of files to whitelist"`
+	Blacklist string `koanf:"ip.blacklist" description:"comma separated list of files to blacklist"`
 
 	Whitelists []string
 	Blacklists []string
