@@ -1,5 +1,5 @@
 
-# Teeworlds VPN Detection & Distributed Banserver (written in Go)
+# Teeworlds VPN detection & distributed ban server
 
 This application connects to teeworlds servers via its configured external console (econ).
 It reads every logged line and checks for joining players.
