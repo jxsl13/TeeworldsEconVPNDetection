@@ -34,7 +34,7 @@ And then start your containers using `make start` and stop them using `make stop
 
 Alternatively, you may compile the application using the Go toolchain `go build .` and run the application by using more or less the exact same `.env` file as for docker and start the application with `./TeeworldsEconVPNDetection --config ./.env`.
 
-You can also set up your redis database using docker with the provided `docker-compose.yml` file or just execute `make redis`.
+You can also set up your redis database using docker with the provided `docker-compose.redis.yaml` file or just execute `make redis`.
 
 
 ### Redis server for caching of IPs
