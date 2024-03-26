@@ -151,6 +151,7 @@ func (c *rootContext) RunE(cmd *cobra.Command, args []string) error {
 		log.Printf("Removed %d ip ranges from %s\n", removed, file)
 	}
 
+	log.Printf("Connecting to %d econ addresses\n", len(c.Config.EconServers))
 	for idx, addr := range c.Config.EconServers {
 		go econ.NewEvaluationRoutine(
 			c.Ctx,
