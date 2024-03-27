@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 
 	"github.com/jxsl13/TeeworldsEconVPNDetection/config"
 	"github.com/jxsl13/TeeworldsEconVPNDetection/econ"
@@ -152,7 +153,16 @@ func (c *rootContext) RunE(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Printf("Connecting to %d econ addresses\n", len(c.Config.EconServers))
+	var (
+		startedWG sync.WaitGroup
+		stoppedWG sync.WaitGroup
+	)
+
+	log.Println("Starting...")
 	for idx, addr := range c.Config.EconServers {
+		startedWG.Add(1)
+		stoppedWG.Add(1)
+
 		go econ.NewEvaluationRoutine(
 			c.Ctx,
 			addr,
@@ -162,11 +172,16 @@ func (c *rootContext) RunE(cmd *cobra.Command, args []string) error {
 			c.Config.ReconnectTimeout,
 			c.Config.VPNBanTime,
 			c.Config.VPNBanReason,
+			&startedWG,
+			&stoppedWG,
 		)
 	}
+
+	startedWG.Wait()
 	log.Println("Started up successfully")
 	<-c.Ctx.Done()
 	log.Println("Shutting down...")
-
+	stoppedWG.Wait()
+	log.Println("Shutdown successful")
 	return nil
 }

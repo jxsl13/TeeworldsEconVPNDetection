@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/jxsl13/TeeworldsEconVPNDetection/vpn"
@@ -13,13 +14,13 @@ import (
 
 var (
 	// 0: full 1: ID 2: IP
-	ddnetJoinRegex = regexp.MustCompile(`player has entered the game\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
+	ddnetJoinRegex = regexp.MustCompile(`(?i)player has entered the game\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
 
 	// 0: full 1: ID 2: IP 3: port 4: version 5: name 6: clan 7: country
-	playerzCatchJoinRegex = regexp.MustCompile(`id=([\d]+) addr=([a-fA-F0-9\.\:\[\]]+):([\d]+) version=(\d+) name='(.{0,20})' clan='(.{0,16})' country=([-\d]+)$`)
+	playerzCatchJoinRegex = regexp.MustCompile(`(?i)id=([\d]+) addr=([a-fA-F0-9\.\:\[\]]+):([\d]+) version=(\d+) name='(.{0,20})' clan='(.{0,16})' country=([-\d]+)$`)
 
 	// 0: full 1: ID 2: IP
-	playerVanillaJoinRegex = regexp.MustCompile(`player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
+	playerVanillaJoinRegex = regexp.MustCompile(`(?i)player is ready\. ClientID=([\d]+) addr=[^\d]{0,2}([\d]{1,3}\.[\d]{1,3}\.[\d]{1,3}\.[\d]{1,3})[^\d]{0,2}`)
 )
 
 func vpnCheck(
@@ -32,7 +33,7 @@ func vpnCheck(
 
 	isVPN, reason, err := checker.IsVPN(ip)
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 		return
 	}
 
@@ -62,15 +63,37 @@ func NewEvaluationRoutine(
 	reconnTimeout time.Duration,
 	vpnBantime time.Duration,
 	vpnBanReason string,
+	startedWG *sync.WaitGroup,
+	stoppedWG *sync.WaitGroup,
 ) {
+	defer stoppedWG.Done()
 
+	var once sync.Once
+	defer func() {
+		once.Do(func() {
+			startedWG.Done()
+		})
+	}()
+
+	log.Printf("Dialing to %s\n", addr)
 	econ, err := econ.DialTo(addr, pw)
 	if err != nil {
 		checker.Close()
-		log.Fatalf("Could not connect to %s, error: %s\n", addr, err.Error())
+		log.Printf("Could not connect to %s, error: %v\n", addr, err)
 		return
 	}
-	defer econ.Close()
+	defer func() {
+		_ = econ.Close()
+		log.Printf("Closed connection to: %s\n", addr)
+	}()
+
+	// enable verbose logging which is required for the join messages
+	log.Printf("increasing output level for %s\n", addr)
+	err = econ.WriteLine("ec_output_level 2")
+	if err != nil {
+		log.Printf("Could not set output level to 2 for for connection %s: error: %v\n", addr, err)
+		return
+	}
 
 	accumulatedRetryTime := time.Duration(0)
 	retries := 0
@@ -80,6 +103,7 @@ func NewEvaluationRoutine(
 	for {
 		if retries == 0 {
 			log.Println("Connected to server:", addr)
+			once.Do(func() { startedWG.Done() })
 		} else {
 			log.Println("Retrying to connect to server:", addr)
 		}
@@ -93,7 +117,7 @@ func NewEvaluationRoutine(
 			default:
 				line, err := econ.ReadLine()
 				if err != nil {
-					log.Printf("Lost connection to %s, error: %s\n", addr, err.Error())
+					log.Printf("Lost connection to %s, error: %v\n", addr, err)
 					break parseLine
 				}
 
@@ -107,6 +131,7 @@ func NewEvaluationRoutine(
 				} else {
 					continue
 				}
+				log.Printf("%s joined server %s\n", ip, addr)
 				go vpnCheck(
 					econ,
 					ip,
