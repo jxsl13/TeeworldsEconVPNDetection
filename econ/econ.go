@@ -84,7 +84,6 @@ func NewEvaluationRoutine(
 	go func(addr string) {
 		<-ctx.Done()
 		_ = econ.Close()
-		log.Printf("Closed connection: %s\n", addr)
 	}(addr)
 
 	accumulatedRetryTime := time.Duration(0)
@@ -111,36 +110,36 @@ func NewEvaluationRoutine(
 
 	parseLine:
 		for {
-			select {
-			case <-ctx.Done():
-				log.Printf("Closing connection to: %s\n", addr)
-				return
-			default:
-				line, err := econ.ReadLine()
-				if err != nil {
+			line, err := econ.ReadLine()
+			if err != nil {
+				select {
+				case <-ctx.Done():
+					log.Printf("Closing connection to: %s\n", addr)
+					return
+				default:
 					log.Printf("Lost connection to %s, error: %v\n", addr, err)
 					break parseLine
 				}
-
-				// TODO: check if it's a join message synchronously
-				if matches = ddnetJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
-					ip = matches[2]
-				} else if matches = playerzCatchJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
-					ip = matches[2]
-				} else if matches = playerVanillaJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
-					ip = matches[2]
-				} else {
-					continue
-				}
-				log.Printf("%s joined server %s\n", ip, addr)
-				go vpnCheck(
-					econ,
-					ip,
-					checker,
-					vpnBantime,
-					vpnBanReason,
-				)
 			}
+
+			// TODO: check if it's a join message synchronously
+			if matches = ddnetJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
+				ip = matches[2]
+			} else if matches = playerzCatchJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
+				ip = matches[2]
+			} else if matches = playerVanillaJoinRegex.FindStringSubmatch(line); len(matches) > 0 {
+				ip = matches[2]
+			} else {
+				continue
+			}
+			log.Printf("%s joined server %s\n", ip, addr)
+			go vpnCheck(
+				econ,
+				ip,
+				checker,
+				vpnBantime,
+				vpnBanReason,
+			)
 
 		}
 
