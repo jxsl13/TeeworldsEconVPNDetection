@@ -84,16 +84,8 @@ func NewEvaluationRoutine(
 	}
 	defer func() {
 		_ = econ.Close()
-		log.Printf("Closed connection to: %s\n", addr)
+		log.Printf("Closed connection: %s\n", addr)
 	}()
-
-	// enable verbose logging which is required for the join messages
-	log.Printf("increasing output level for %s\n", addr)
-	err = econ.WriteLine("ec_output_level 2")
-	if err != nil {
-		log.Printf("Could not set output level to 2 for for connection %s: error: %v\n", addr, err)
-		return
-	}
 
 	accumulatedRetryTime := time.Duration(0)
 	retries := 0
@@ -103,6 +95,15 @@ func NewEvaluationRoutine(
 	for {
 		if retries == 0 {
 			log.Println("Connected to server:", addr)
+
+			const logCommand = "ec_output_level 2"
+			// enable verbose logging which is required for the join messages
+			log.Printf("Setting: %q for connection %s\n", logCommand, addr)
+			err = econ.WriteLine(logCommand)
+			if err != nil {
+				log.Printf("Failed to set %q for connection %s: %v\n", logCommand, addr, err)
+				return
+			}
 			once.Do(func() { startedWG.Done() })
 		} else {
 			log.Println("Retrying to connect to server:", addr)
