@@ -78,14 +78,14 @@ func NewEvaluationRoutine(
 	log.Printf("Dialing to %s\n", addr)
 	econ, err := econ.DialTo(addr, pw)
 	if err != nil {
-		checker.Close()
 		log.Printf("Could not connect to %s, error: %v\n", addr, err)
 		return
 	}
-	defer func() {
+	go func(addr string) {
+		<-ctx.Done()
 		_ = econ.Close()
 		log.Printf("Closed connection: %s\n", addr)
-	}()
+	}(addr)
 
 	accumulatedRetryTime := time.Duration(0)
 	retries := 0
