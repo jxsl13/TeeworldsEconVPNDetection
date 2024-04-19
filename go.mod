@@ -46,8 +46,8 @@ require (
 	github.com/xgfone/go-netaddr v0.6.0 // indirect
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
