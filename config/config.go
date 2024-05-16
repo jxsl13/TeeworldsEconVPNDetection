@@ -121,22 +121,24 @@ func (c *Config) Validate() error {
 // apis returns a list of available apis that is constructed based on the configuration
 func (c *Config) APIs() []vpn.VPN {
 	apis := []vpn.VPN{}
-	if !c.Offline {
-		// share client with all apis
-		// client reuses tls connections
-		httpClient := &http.Client{}
+	if c.Offline {
+		return apis
+	}
 
-		if c.IPHubToken != "" {
-			apis = append(apis, vpn.NewIPHub(httpClient, c.IPHubToken))
-		}
+	// share client with all apis
+	// client reuses tls connections
+	httpClient := &http.Client{}
 
-		if c.VPNApiToken != "" {
-			apis = append(apis, vpn.NewVPNAPI(httpClient, c.VPNApiToken))
-		}
+	if c.IPHubToken != "" {
+		apis = append(apis, vpn.NewIPHub(httpClient, c.IPHubToken))
+	}
 
-		if c.ProxyCheckToken != "" {
-			apis = append(apis, vpn.NewProxyCheck(httpClient, c.ProxyCheckToken))
-		}
+	if c.VPNApiToken != "" {
+		apis = append(apis, vpn.NewVPNAPI(httpClient, c.VPNApiToken))
+	}
+
+	if c.ProxyCheckToken != "" {
+		apis = append(apis, vpn.NewProxyCheck(httpClient, c.ProxyCheckToken))
 	}
 	return apis
 }
