@@ -30,7 +30,7 @@ type IPHub struct {
 }
 
 // String implements the stringer interface
-func (ih IPHub) String() string {
+func (*IPHub) String() string {
 	return "iphub.info"
 }
 
@@ -57,7 +57,7 @@ func (ih *IPHub) Fetch(IP string) (block int, err error) {
 		Path:   "/ip/" + IP,
 	}
 
-	req, err := http.NewRequest("GET", u.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, u.String(), http.NoBody)
 	if err != nil {
 		return 0, fmt.Errorf("error while creating request: %w", err)
 	}

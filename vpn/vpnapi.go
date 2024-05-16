@@ -31,7 +31,7 @@ type VPNAPI struct {
 }
 
 // String implements the stinger interface
-func (it VPNAPI) String() string {
+func (*VPNAPI) String() string {
 	return "vpnapi.io"
 }
 
@@ -57,7 +57,7 @@ func (it *VPNAPI) Fetch(IP string) (bool, error) {
 		}.Encode(),
 	}
 
-	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	request, err := http.NewRequest(http.MethodGet, u.String(), http.NoBody)
 	if err != nil {
 		return false, err
 	}

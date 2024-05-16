@@ -30,7 +30,7 @@ type ProxyCheck struct {
 }
 
 // String implements the stringer interface
-func (ih *ProxyCheck) String() string {
+func (*ProxyCheck) String() string {
 	return "proxycheck.io"
 }
 
@@ -64,7 +64,7 @@ func (ih *ProxyCheck) Fetch(IP string) (bool, error) {
 		}.Encode(),
 	}
 
-	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	request, err := http.NewRequest(http.MethodGet, u.String(), http.NoBody)
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
 	}
