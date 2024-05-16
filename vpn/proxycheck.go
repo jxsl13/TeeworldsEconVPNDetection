@@ -7,9 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 var _ VPN = (*ProxyCheck)(nil)
@@ -17,19 +16,17 @@ var _ VPN = (*ProxyCheck)(nil)
 // NewProxyCheck reates a new api that can be checked for VPN IPs
 func NewProxyCheck(c *http.Client, apikey string) *ProxyCheck {
 	return &ProxyCheck{
-		client: c,
-		// limiter: NewRateLimiter(24*time.Hour, 1000),
-		apiKey: apikey,
-		rate:   rate.NewLimiter(rate.Every(24*time.Hour), 1000),
+		client:  c,
+		limiter: NewRateLimiter(24*time.Hour, 1000),
+		apiKey:  apikey,
 	}
 }
 
 // ProxyCheck implemets the VPNApi interface and checks whether a given IP is a vpn
 type ProxyCheck struct {
-	client *http.Client
-	// limiter *RateLimiter
-	apiKey string
-	rate   *rate.Limiter
+	client  *http.Client
+	limiter *RateLimiter
+	apiKey  string
 }
 
 // String implements the stringer interface
@@ -59,7 +56,7 @@ func (ih *ProxyCheck) Fetch(IP string) (bool, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "proxycheck.io",
-		Path:   "/v2/" + IP,
+		Path:   path.Join("/v2/", IP),
 		RawQuery: url.Values{
 			"vpn": []string{"1"},
 			"asn": []string{"1"},
@@ -67,7 +64,7 @@ func (ih *ProxyCheck) Fetch(IP string) (bool, error) {
 		}.Encode(),
 	}
 
-	request, err := http.NewRequest("GET", u.String(), nil)
+	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -123,7 +120,7 @@ func (ih *ProxyCheck) Fetch(IP string) (bool, error) {
 
 // IsVPN tests if a given IP is a VPN IP
 func (ih *ProxyCheck) IsVPN(IP string) (bool, error) {
-	if !ih.rate.Allow() {
+	if !ih.limiter.Allow() {
 		return false, ErrRateLimitReached
 	}
 

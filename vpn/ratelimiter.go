@@ -13,19 +13,22 @@ type RateLimiter struct {
 	expiresIn time.Duration
 	size      int
 	mutex     sync.Mutex
+	now       func() time.Time
 }
 
 // NewRateLimiter initializes the RateLimiter with the current time
 // expirationDuration What is the time duration each token expires in
 // rateLimit is the amount of requests per expirationDiration, like 1000 requests per Day
 func NewRateLimiter(expirationDuration time.Duration, rateLimit int) *RateLimiter {
-	r := &RateLimiter{}
+	r := &RateLimiter{
+		now: time.Now,
+	}
 
 	r.size = rateLimit
 	r.buffer = ring.New(rateLimit)
 	r.expiresIn = expirationDuration
 
-	initialValue := time.Now()
+	initialValue := r.now()
 
 	for i := 0; i < r.size; i++ {
 		r.buffer = r.buffer.Prev()
@@ -41,7 +44,7 @@ func (r *RateLimiter) Allow() bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	now := time.Now()
+	now := r.now()
 	nextTokenExpiresAt := r.buffer.Next().Value.(time.Time)
 	// is look ahead next token expired
 	if now.After(nextTokenExpiresAt) {

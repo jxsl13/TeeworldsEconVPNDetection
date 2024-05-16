@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 var _ VPN = (*IPHub)(nil)
@@ -16,21 +14,19 @@ var _ VPN = (*IPHub)(nil)
 // NewIPHub reates a new api that can be checked for VPN IPs
 func NewIPHub(c *http.Client, apikey string) *IPHub {
 	return &IPHub{
-		client: c,
-		//limiter: NewRateLimiter(24*time.Hour, 1000),
+		client:  c,
+		limiter: NewRateLimiter(24*time.Hour, 1000),
 		headers: http.Header{
 			"X-Key": []string{apikey},
 		},
-		rate: rate.NewLimiter(rate.Every(24*time.Hour), 1000),
 	}
 }
 
 // IPHub implemets the VPNApi interface and checks whether a given IP is a vpn
 type IPHub struct {
-	client *http.Client
-	// limiter *RateLimiter
+	client  *http.Client
+	limiter *RateLimiter
 	headers http.Header
-	rate    *rate.Limiter
 }
 
 // String implements the stringer interface
@@ -96,7 +92,7 @@ func (ih *IPHub) Fetch(IP string) (block int, err error) {
 
 // IsVPN tests if a given IP is a VPN IP
 func (ih *IPHub) IsVPN(IP string) (bool, error) {
-	if !ih.rate.Allow() {
+	if !ih.limiter.Allow() {
 		return false, ErrRateLimitReached
 	}
 

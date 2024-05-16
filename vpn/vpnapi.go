@@ -7,10 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 var _ VPN = (*VPNAPI)(nil)
@@ -18,19 +17,17 @@ var _ VPN = (*VPNAPI)(nil)
 // NewVPNAPI creates a new api endpoint that can check IPs for whether they are VPNs or not.
 func NewVPNAPI(c *http.Client, apiKey string) *VPNAPI {
 	return &VPNAPI{
-		client: c,
-		apiKey: apiKey,
-		// limiter: NewRateLimiter(24*time.Hour, 1000),
-		rate: rate.NewLimiter(rate.Every(24*time.Hour), 1000),
+		client:  c,
+		apiKey:  apiKey,
+		limiter: NewRateLimiter(24*time.Hour, 1000),
 	}
 }
 
 // VPNAPI implements the VPNApi and allows to check if an ip is a vpn
 type VPNAPI struct {
-	client *http.Client
-	apiKey string
-	// limiter *RateLimiter
-	rate *rate.Limiter
+	client  *http.Client
+	apiKey  string
+	limiter *RateLimiter
 }
 
 // String implements the stinger interface
@@ -54,13 +51,13 @@ func (it *VPNAPI) Fetch(IP string) (bool, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "vpnapi.io",
-		Path:   "/api/" + IP,
+		Path:   path.Join("/api/", IP),
 		RawQuery: url.Values{
 			"key": []string{it.apiKey},
 		}.Encode(),
 	}
 
-	request, err := http.NewRequest("GET", u.String(), nil)
+	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return false, err
 	}
@@ -97,7 +94,7 @@ func (it *VPNAPI) Fetch(IP string) (bool, error) {
 
 // IsVPN requests the api endpoint to test whether an IP is a VPN
 func (it *VPNAPI) IsVPN(IP string) (bool, error) {
-	if !it.rate.Allow() {
+	if !it.limiter.Allow() {
 		return false, ErrRateLimitReached
 	}
 
