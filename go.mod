@@ -1,6 +1,7 @@
 module github.com/jxsl13/TeeworldsEconVPNDetection
 
 go 1.21.6
+toolchain go1.23.7
 
 require (
 	github.com/go-playground/validator/v10 v10.17.0
@@ -45,8 +46,8 @@ require (
 	github.com/xgfone/go-netaddr v0.6.0 // indirect
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
